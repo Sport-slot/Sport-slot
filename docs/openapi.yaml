@@ -361,6 +361,38 @@ paths:
                   uuAppErrorMap: { $ref: '#/components/schemas/UuAppErrorMap' }
         '400': { $ref: '#/components/responses/InvalidDtoIn' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/venue/listMine:
+    get:
+      tags: [Venue]
+      summary: Moje sportoviště
+      description: Jen pro roli MANAGER. Vrací všechna sportoviště přihlášeného správce včetně deaktivovaných a bez kurtů.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Seznam sportovišť správce
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  itemList:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        city: { type: string }
+                        imageUrl: { type: string, nullable: true }
+                        active: { type: boolean }
+                        deactivatedAt: { type: string, format: date-time, nullable: true }
+                        courtCount: { type: integer }
+                        sports: { type: array, items: { type: string } }
+                        createdAt: { type: string, format: date-time }
+                  uuAppErrorMap: { $ref: '#/components/schemas/UuAppErrorMap' }
+        '401': { $ref: '#/components/responses/NotAuthenticated' }
+        '403': { $ref: '#/components/responses/NotAuthorized' }
   /api/venue/setActive:
     post:
       tags: [Venue]

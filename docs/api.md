@@ -102,6 +102,13 @@ Když `response.ok` je `false`, zobrazte `message` první položky v `uuAppError
 * **Poznámka:** Deaktivované sportoviště se nevrací ve `venue/list`; kurty, hodnocení a rezervace zůstávají. Opakované volání se stejnou hodnotou nic nemění. `reservation/create` (S2) musí deaktivované sportoviště odmítnout.
 * **Chyby:** `venue/setActive/invalidDtoIn` (400), `notAuthenticated` (401), `notAuthorized` (403 – není vlastník), `venue/setActive/venueDoesNotExist` (404), varování `venue/setActive/unsupportedKeys`.
 
+### `GET venue/listMine`
+* **Popis:** Přehled „Moje sportoviště“ (BUC Správce zobrazí svá sportoviště).
+* **Práva:** Správce (role `PLAYER` + `MANAGER`); vrací jen sportoviště přihlášeného správce.
+* **dtoIn:** žádné.
+* **dtoOut:** `itemList: [{ id, name, city, imageUrl, active, deactivatedAt, courtCount, sports: [], createdAt }]` seřazené podle názvu. Obsahuje i deaktivovaná sportoviště a sportoviště bez kurtů.
+* **Chyby:** `notAuthenticated` (401), `notAuthorized` (403), varování `venue/listMine/unsupportedKeys`.
+
 ### `GET venue/list`
 * **Popis:** Vyhledání sportovišť podle sportu a města (US 6, BUC 3).
 * **Práva:** Návštěvník (nepřihlášený) i Hráč.
