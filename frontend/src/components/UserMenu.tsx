@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CaretDown, MagnifyingGlass, Plus, SignOut } from "@phosphor-icons/react";
+import { Buildings, CaretDown, MagnifyingGlass, Plus, SignOut } from "@phosphor-icons/react";
 import type { CurrentUser } from "@/lib/api";
 import { initialsOf, logout, roleLabels } from "@/lib/auth";
 
@@ -110,9 +110,14 @@ export function UserMenu({ user, onOpen }: { user: CurrentUser; onOpen?: () => v
             <MagnifyingGlass size={18} aria-hidden="true" /> Najít sportoviště
           </Link>
           {isManager && (
-            <Link href="/venues/new" onClick={() => setOpen(false)} className={itemClass}>
-              <Plus size={18} aria-hidden="true" /> Přidat sportoviště
-            </Link>
+            <>
+              <Link href="/venues/mine" onClick={() => setOpen(false)} className={itemClass}>
+                <Buildings size={18} aria-hidden="true" /> Moje sportoviště
+              </Link>
+              <Link href="/venues/new" onClick={() => setOpen(false)} className={itemClass}>
+                <Plus size={18} aria-hidden="true" /> Přidat sportoviště
+              </Link>
+            </>
           )}
         </nav>
         <div className="mt-2 border-t border-line pt-2">

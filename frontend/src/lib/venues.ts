@@ -100,3 +100,26 @@ export async function setVenueActive(id: string, active: boolean): Promise<Venue
   }
   return (await response.json()) as VenueActiveState;
 }
+
+export type MyVenue = {
+  id: string;
+  name: string;
+  city: string;
+  imageUrl: string | null;
+  active: boolean;
+  deactivatedAt: string | null;
+  courtCount: number;
+  sports: string[];
+  createdAt: string;
+};
+
+export async function listMyVenues(): Promise<MyVenue[]> {
+  const response = await fetch(`${apiBaseUrl}/venue/listMine`, {
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+  const body = (await response.json()) as { itemList: MyVenue[] };
+  return body.itemList;
+}
