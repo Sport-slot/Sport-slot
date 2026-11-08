@@ -205,6 +205,41 @@ test("CORS preflight rejects unauthorized origin", async () => {
   );
 });
 
+test("CORS preflight allows local development next to the deployed frontend", async () => {
+  const app = createApp(serviceUrls, {
+    ...CONFIG,
+    frontendOrigin: "https://sport-slot.netlify.app",
+  });
+
+  for (const origin of ["https://sport-slot.netlify.app", "http://localhost:3000"]) {
+    const response = await request(app)
+      .options("/api/court/create")
+      .set("Origin", origin)
+      .set("Access-Control-Request-Method", "POST");
+
+    assert.equal(response.status, 204);
+    assert.equal(response.headers["access-control-allow-origin"], origin);
+  }
+});
+
+test("FRONTEND_ORIGIN accepts a comma-separated list", async () => {
+  const app = createApp(serviceUrls, {
+    ...CONFIG,
+    frontendOrigin: "https://sport-slot.netlify.app, https://preview.example",
+  });
+
+  const response = await request(app)
+    .options("/api/court/create")
+    .set("Origin", "https://preview.example")
+    .set("Access-Control-Request-Method", "POST");
+
+  assert.equal(response.status, 204);
+  assert.equal(
+    response.headers["access-control-allow-origin"],
+    "https://preview.example",
+  );
+});
+
 test("public court/list forwards identity when a valid JWT is sent", async () => {
   const token = await createToken(["PLAYER", "MANAGER"]);
 

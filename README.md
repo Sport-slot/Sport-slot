@@ -40,6 +40,8 @@ npm run dev --workspace services/venue-service   # jednotlivá služba (porty 40
 
 Proměnné prostředí jsou popsané v `.env.example`.
 
+Frontend jde spustit i proti nasazenému backendu bez lokální databáze: do `frontend/.env.local` dejte `NEXT_PUBLIC_API_URL=https://sport-slot-api.onrender.com/api` a `NEXT_PUBLIC_GOOGLE_CLIENT_ID` z `.env.example` a spusťte `npm run dev:frontend`. Gateway povoluje CORS vždy pro `http://localhost:3000` a `http://127.0.0.1:3000`, další adresy se přidávají do `FRONTEND_ORIGIN` (víc adres oddělte čárkou).
+
 ## Kontroly (CI)
 Každý PR do `main` spouští GitHub Actions (`.github/workflows/ci.yml`):
 * název větve `feature/…` nebo `bugfix/…`,

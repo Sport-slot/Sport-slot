@@ -37,6 +37,17 @@ const MANAGER_ENDPOINTS = new Set([
   "POST /api/priceRule/create",
 ]);
 
+const LOCAL_DEV_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"];
+
+export function allowedOriginsFrom(frontendOrigin) {
+  const configured = (frontendOrigin ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return new Set([...configured, ...LOCAL_DEV_ORIGINS]);
+}
+
 export function createApp(
   serviceUrls,
   {
@@ -48,16 +59,18 @@ export function createApp(
   const app = express();
 
   const authenticate = jwtSecret ? createAuthMiddleware(jwtSecret) : null;
+  const allowedOrigins = allowedOriginsFrom(frontendOrigin);
 
   // CORS for the frontend
   app.use((req, res, next) => {
     const origin = req.get("origin");
+    const originAllowed = Boolean(origin) && allowedOrigins.has(origin);
 
     if (origin) {
       res.vary("Origin");
     }
 
-    if (origin && origin === frontendOrigin) {
+    if (originAllowed) {
       res.set("Access-Control-Allow-Origin", origin);
       res.set(
         "Access-Control-Allow-Methods",
@@ -67,7 +80,7 @@ export function createApp(
     }
 
     if (req.method === "OPTIONS" && req.path.startsWith("/api/")) {
-      if (!frontendOrigin || origin !== frontendOrigin) {
+      if (!originAllowed) {
         return next(new AppError("notAuthorized", "Nemáte oprávnění.", 403));
       }
 
