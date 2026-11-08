@@ -1,5 +1,6 @@
 import {
   apiBaseUrl,
+  authHeaders,
   toApiError,
   type DayOfWeek,
   type UuAppErrorMap,
@@ -42,6 +43,9 @@ export type VenueDetail = {
   city: string;
   description: string | null;
   imageUrl: string | null;
+  active: boolean;
+  deactivatedAt: string | null;
+  isOwner: boolean;
   openingHours: { dayOfWeek: DayOfWeek; openTime: string; closeTime: string }[];
   courts: Court[];
   uuAppErrorMap: UuAppErrorMap;
@@ -69,9 +73,30 @@ export async function listVenues({
 export async function getVenue(id: string): Promise<VenueDetail> {
   const response = await fetch(
     `${apiBaseUrl}/venue/get?${new URLSearchParams({ id })}`,
+    { headers: authHeaders() },
   );
   if (!response.ok) {
     throw await toApiError(response);
   }
   return (await response.json()) as VenueDetail;
+}
+
+export type VenueActiveState = {
+  id: string;
+  name: string;
+  active: boolean;
+  deactivatedAt: string | null;
+  uuAppErrorMap: UuAppErrorMap;
+};
+
+export async function setVenueActive(id: string, active: boolean): Promise<VenueActiveState> {
+  const response = await fetch(`${apiBaseUrl}/venue/setActive`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ id, active }),
+  });
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+  return (await response.json()) as VenueActiveState;
 }
