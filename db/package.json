@@ -7,11 +7,9 @@
     "generate": "prisma generate --config prisma7.config.ts",
     "seed:demo": "prisma db execute --config prisma7.config.ts --file prisma/seed-demo.sql"
   },
-  "devDependencies": {
+  "dependencies": {
+    "@prisma/client": "^7.10.1",
     "dotenv": "^18.0.9",
     "prisma": "^7.10.1"
-  },
-  "dependencies": {
-    "@prisma/client": "^7.10.1"
   }
 }
