@@ -18,6 +18,7 @@ import {
 } from "@phosphor-icons/react";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { isOptimizableImage, venueImageSrc } from "@/lib/venueImages";
 import { capitalize, imageForSports, popularSports } from "@/lib/venueVisuals";
 import { listVenues, venuePageSize, type VenueList, type VenueListItem } from "@/lib/venues";
 
@@ -316,7 +317,8 @@ function VenueCard({
     >
       <div className="relative aspect-[16/9] overflow-hidden bg-surface">
         <Image
-          src={venue.imageUrl ?? imageForSports(venue.sports)}
+          src={venue.imageUrl ? venueImageSrc(venue.imageUrl) : imageForSports(venue.sports)}
+          unoptimized={venue.imageUrl ? !isOptimizableImage(venueImageSrc(venue.imageUrl)) : false}
           alt={venue.imageUrl ? venue.name : ""}
           fill
           priority={priority}

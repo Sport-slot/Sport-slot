@@ -20,6 +20,7 @@ import {
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dayNames, daysOfWeek } from "@/lib/venueForm";
+import { isOptimizableImage, venueImageSrc } from "@/lib/venueImages";
 import { capitalize, imageForSports } from "@/lib/venueVisuals";
 import { getVenue, type VenueDetail as Venue } from "@/lib/venues";
 
@@ -180,7 +181,7 @@ function VenueContent({ venue }: { venue: Venue }) {
       <div className="mt-6 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
         <div className="min-w-0">
           <figure className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-surface sm:aspect-[2.3/1]">
-            <Image src={venue.imageUrl ?? imageForSports(sports)} alt={venue.imageUrl ? venue.name : ""} fill priority sizes="(min-width: 1360px) 900px, (min-width: 1024px) 65vw, 100vw" className="object-cover" />
+            <Image src={venue.imageUrl ? venueImageSrc(venue.imageUrl) : imageForSports(sports)} unoptimized={venue.imageUrl ? !isOptimizableImage(venueImageSrc(venue.imageUrl)) : false} alt={venue.imageUrl ? venue.name : ""} fill priority sizes="(min-width: 1360px) 900px, (min-width: 1024px) 65vw, 100vw" className="object-cover" />
             {!venue.imageUrl && <figcaption className="absolute right-3 bottom-3 rounded-md bg-brand-900/75 px-2.5 py-1.5 text-xs text-white">Ilustrační fotografie</figcaption>}
           </figure>
           <nav aria-label="Na této stránce" className="mt-4 flex flex-wrap gap-x-5 border-b border-line text-sm font-medium sm:gap-x-7">
