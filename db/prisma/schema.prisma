@@ -80,6 +80,17 @@ model Venue {
   @@schema("venue")
 }
 
+model VenueImage {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  uploadedBy  String   @map("uploaded_by") @db.Uuid
+  contentType String   @map("content_type") @db.VarChar(20)
+  data        Bytes
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("venue_images")
+  @@schema("venue")
+}
+
 
 model OpeningHours {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid

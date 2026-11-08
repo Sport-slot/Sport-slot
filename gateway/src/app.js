@@ -22,6 +22,7 @@ const PUBLIC_ENDPOINTS = new Set([
   "POST /api/auth/googleCallback",
   "GET /api/venue/list",
   "GET /api/venue/get",
+  "GET /api/venueImage/get",
   "GET /api/court/list",
   "GET /api/priceRule/listByCourt",
   "GET /api/review/listByVenue",
@@ -29,6 +30,7 @@ const PUBLIC_ENDPOINTS = new Set([
 
 const MANAGER_ENDPOINTS = new Set([
   "POST /api/venue/create",
+  "POST /api/venueImage/upload",
   "POST /api/court/create",
   "POST /api/priceRule/create",
 ]);

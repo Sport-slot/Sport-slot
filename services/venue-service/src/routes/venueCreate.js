@@ -1,51 +1,21 @@
 import { Router } from "express";
-import {
-  AppError,
-  invalidDtoIn,
-  notAuthenticated,
-  notAuthorized,
-  unsupportedKeys,
-} from "@sportslot/api-format";
+import { AppError, invalidDtoIn, unsupportedKeys } from "@sportslot/api-format";
+import { managerIdFromGateway } from "../gatewayAuth.js";
+import { VENUE_IMAGE_URL_PATTERN } from "./venueImage.js";
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 const TEXT_LIMITS = { name: 100, address: 200, city: 100 };
 const DESCRIPTION_LIMIT = 2000;
+const IMAGE_URL_LIMIT = 500;
+const BUNDLED_IMAGE_PATTERN = /^\/images\/venues\/[a-z0-9-]+\.(webp|jpg|png)$/;
 const ALLOWED_KEYS = [
   "name",
   "address",
   "city",
   "description",
   "openingHoursList",
+  "imageUrl",
 ];
-
-function managerIdFromGateway(req, gatewaySecret) {
-  if (typeof gatewaySecret !== "string" || gatewaySecret.length < 32) {
-    throw new AppError(
-      "gatewayUnavailable",
-      "Ověření gateway není nakonfigurováno.",
-      503,
-    );
-  }
-
-  if (req.get("x-gateway-secret") !== gatewaySecret) {
-    throw notAuthenticated();
-  }
-
-  const userId = req.get("x-user-id");
-  const roles = (req.get("x-user-roles") ?? "").split(",");
-
-  if (!userId || !UUID_PATTERN.test(userId)) {
-    throw notAuthenticated();
-  }
-
-  if (!roles.includes("PLAYER") || !roles.includes("MANAGER")) {
-    throw notAuthorized();
-  }
-
-  return userId;
-}
 
 function validateOpeningHoursList(value, maps) {
   if (value === undefined) {
@@ -138,6 +108,20 @@ function validateDtoIn(dtoIn) {
 
   validateOpeningHoursList(dtoIn.openingHoursList, maps);
 
+  const { imageUrl } = dtoIn;
+
+  if (imageUrl !== undefined && imageUrl !== null) {
+    if (typeof imageUrl !== "string") {
+      maps.invalidTypeKeyMap.imageUrl = "imageUrl musí být řetězec.";
+    } else if (
+      imageUrl.length > IMAGE_URL_LIMIT ||
+      !(VENUE_IMAGE_URL_PATTERN.test(imageUrl) || BUNDLED_IMAGE_PATTERN.test(imageUrl))
+    ) {
+      maps.invalidValueKeyMap.imageUrl =
+        "imageUrl musí odkazovat na nahranou fotku sportoviště.";
+    }
+  }
+
   const hasErrors = Object.values(maps).some(
     (map) => Object.keys(map).length > 0,
   );
@@ -177,6 +161,23 @@ export function createVenueCreateRouter({
     const address = dtoIn.address.trim();
     const city = dtoIn.city.trim();
     const description = dtoIn.description?.trim() || null;
+    const imageUrl = dtoIn.imageUrl ?? null;
+    const uploadedImageId = imageUrl?.match(VENUE_IMAGE_URL_PATTERN)?.[1];
+
+    if (uploadedImageId) {
+      const image = await db.venueImage.findUnique({
+        where: { id: uploadedImageId },
+        select: { uploadedBy: true },
+      });
+
+      if (!image || image.uploadedBy !== managerId) {
+        throw invalidDtoIn({
+          invalidValueKeyMap: {
+            imageUrl: "Fotka neexistuje nebo ji nahrál jiný uživatel.",
+          },
+        });
+      }
+    }
 
     let venue;
 
@@ -188,6 +189,7 @@ export function createVenueCreateRouter({
           address,
           city,
           description,
+          imageUrl,
           openingHours: {
             create: dtoIn.openingHoursList.map((hours) => ({
               dayOfWeek: hours.dayOfWeek,
@@ -203,6 +205,7 @@ export function createVenueCreateRouter({
           address: true,
           city: true,
           description: true,
+          imageUrl: true,
           createdAt: true,
           openingHours: {
             orderBy: { dayOfWeek: "asc" },

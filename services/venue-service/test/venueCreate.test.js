@@ -39,6 +39,7 @@ function fakeDb(onCreate) {
           address: data.address,
           city: data.city,
           description: data.description,
+          imageUrl: data.imageUrl,
           createdAt: new Date("2026-11-07T10:00:00Z"),
           openingHours: [...data.openingHours.create].sort(
             (a, b) => a.dayOfWeek - b.dayOfWeek,
@@ -143,4 +144,59 @@ test("POST /venue/create warns about unsupported keys", async () => {
     response.body.uuAppErrorMap["venue/create/unsupportedKeys"].paramMap,
     { unsupportedKeyList: ["rating"] },
   );
+});
+
+const IMAGE_ID = "00000000-0000-4000-8000-000000000777";
+const UPLOADED_IMAGE_URL = `/venueImage/get?id=${IMAGE_ID}`;
+
+function dbWithImage(uploadedBy) {
+  const db = fakeDb();
+  db.venueImage = {
+    findUnique: async ({ where }) =>
+      where.id === IMAGE_ID && uploadedBy ? { uploadedBy } : null,
+  };
+  return db;
+}
+
+test("POST /venue/create stores an image the manager uploaded", async () => {
+  const response = await post(dbWithImage(MANAGER_ID), {
+    ...validDtoIn,
+    imageUrl: UPLOADED_IMAGE_URL,
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.imageUrl, UPLOADED_IMAGE_URL);
+  assert.deepEqual(response.body.uuAppErrorMap, {});
+});
+
+test("POST /venue/create rejects an image uploaded by someone else", async () => {
+  const response = await post(
+    dbWithImage("00000000-0000-4000-8000-000000000999"),
+    { ...validDtoIn, imageUrl: UPLOADED_IMAGE_URL },
+  );
+
+  assert.equal(response.status, 400);
+  assert.ok(
+    response.body.uuAppErrorMap["venue/create/invalidDtoIn"].paramMap
+      .invalidValueKeyMap.imageUrl,
+  );
+});
+
+test("POST /venue/create rejects an image URL pointing elsewhere", async () => {
+  const response = await post(fakeDb(), {
+    ...validDtoIn,
+    imageUrl: "https://example.com/photo.jpg",
+  });
+
+  assert.equal(response.status, 400);
+});
+
+test("POST /venue/create accepts a bundled demo photo", async () => {
+  const response = await post(fakeDb(), {
+    ...validDtoIn,
+    imageUrl: "/images/venues/padel.webp",
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.imageUrl, "/images/venues/padel.webp");
 });

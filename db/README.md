@@ -24,7 +24,9 @@ The database schema and initial migration are implemented and deployed. Backend 
 | Package manager | npm (workspaces) |
 | Connection | Session pooler, port 5432 |
 | Initial migration | `20261030_init` |
-| Tables | 9 across 5 schemas |
+| Venue photo URL | `20261107_venue_image_url` |
+| Uploaded venue photos | `20261108_venue_images` |
+| Tables | 10 across 5 schemas |
 
 The shared database is a development environment, but its Supabase main branch is labeled **PRODUCTION**. All schema changes must be coordinated.
 

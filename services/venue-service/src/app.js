@@ -1,6 +1,7 @@
 import express from "express";
 import { createCourtRouter } from "./routes/court.js";
 import { createVenueCreateRouter } from "./routes/venueCreate.js";
+import { createVenueImageRouter } from "./routes/venueImage.js";
 import { getVenue, listVenues } from "./venue.js";
 import { errorHandler, notFound } from "@sportslot/api-format";
 
@@ -32,6 +33,8 @@ export function createApp({
   });
 
   app.use("/venue", createVenueCreateRouter({ db, gatewaySecret }));
+
+  app.use("/venueImage", createVenueImageRouter({ db, gatewaySecret }));
 
   app.use("/court", createCourtRouter({ db, gatewaySecret }));
 

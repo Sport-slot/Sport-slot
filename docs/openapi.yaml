@@ -199,6 +199,11 @@ paths:
                 address: { type: string, minLength: 1, maxLength: 200, example: Lidická 1 }
                 city: { type: string, minLength: 1, maxLength: 100, example: Brno }
                 description: { type: string, maxLength: 2000 }
+                imageUrl:
+                  type: string
+                  maxLength: 500
+                  description: Odkaz vrácený z venueImage/upload (nahraný stejným správcem) nebo ilustrační fotka /images/venues/*.webp.
+                  example: /venueImage/get?id=8f14e45f-ceea-4e7a-9a1b-2f0c9d6e1a11
                 openingHoursList:
                   type: array
                   minItems: 1
@@ -219,6 +224,7 @@ paths:
                   address: { type: string }
                   city: { type: string }
                   description: { type: string, nullable: true }
+                  imageUrl: { type: string, nullable: true }
                   createdAt: { type: string, format: date-time }
                   openingHoursList:
                     type: array
@@ -228,6 +234,63 @@ paths:
         '401': { $ref: '#/components/responses/NotAuthenticated' }
         '403': { $ref: '#/components/responses/NotAuthorized' }
         '409': { $ref: '#/components/responses/Conflict' }
+  /api/venueImage/upload:
+    post:
+      tags: [Venue]
+      summary: Nahrání fotky sportoviště
+      description: Jen pro roli MANAGER. Tělo jsou přímo bajty obrázku (max. 3 MB). Vrácený imageUrl se předá do venue/create.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema: { type: string, format: binary }
+          image/png:
+            schema: { type: string, format: binary }
+          image/webp:
+            schema: { type: string, format: binary }
+      responses:
+        '200':
+          description: Fotka uložena
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  imageUrl: { type: string, example: /venueImage/get?id=8f14e45f-ceea-4e7a-9a1b-2f0c9d6e1a11 }
+                  contentType: { type: string, enum: [image/jpeg, image/png, image/webp] }
+                  size: { type: integer }
+                  createdAt: { type: string, format: date-time }
+                  uuAppErrorMap: { $ref: '#/components/schemas/UuAppErrorMap' }
+        '400': { $ref: '#/components/responses/InvalidDtoIn' }
+        '401': { $ref: '#/components/responses/NotAuthenticated' }
+        '403': { $ref: '#/components/responses/NotAuthorized' }
+        '413':
+          description: Fotka je větší než 3 MB (imageTooLarge)
+        '415':
+          description: Nepodporovaný formát nebo obsah neodpovídá Content-Type (unsupportedImageType)
+  /api/venueImage/get:
+    get:
+      tags: [Venue]
+      summary: Stažení fotky sportoviště
+      description: Veřejné. Vrací bajty obrázku s dlouhodobým cache.
+      parameters:
+        - { name: id, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Obrázek
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+            image/png:
+              schema: { type: string, format: binary }
+            image/webp:
+              schema: { type: string, format: binary }
+        '400': { $ref: '#/components/responses/InvalidDtoIn' }
+        '404':
+          description: Fotka nenalezena (venueImageDoesNotExist)
   /api/venue/list:
     get:
       tags: [Venue]
