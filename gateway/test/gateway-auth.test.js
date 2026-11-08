@@ -204,3 +204,24 @@ test("CORS preflight rejects unauthorized origin", async () => {
     undefined,
   );
 });
+
+test("public court/list forwards identity when a valid JWT is sent", async () => {
+  const token = await createToken(["PLAYER", "MANAGER"]);
+
+  const response = await request(createApp(serviceUrls, CONFIG))
+    .get("/api/court/list")
+    .set("Authorization", `Bearer ${token}`);
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.headers["x-user-id"], USER_ID);
+  assert.equal(response.body.headers["x-user-roles"], "PLAYER,MANAGER");
+});
+
+test("public court/list stays anonymous with an invalid JWT", async () => {
+  const response = await request(createApp(serviceUrls, CONFIG))
+    .get("/api/court/list")
+    .set("Authorization", "Bearer not-a-token");
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.headers["x-user-id"], undefined);
+});

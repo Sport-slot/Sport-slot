@@ -18,11 +18,11 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 import { dayNames, daysOfWeek } from "@/lib/venueForm";
 import { isOptimizableImage, venueImageSrc } from "@/lib/venueImages";
 import { capitalize, imageForSports } from "@/lib/venueVisuals";
 import { getVenue, type VenueDetail as Venue } from "@/lib/venues";
+import { DeactivatedNotice, VenueManagement } from "@/components/VenueManagement";
 
 type LoadState =
   | { status: "loading" }
@@ -125,7 +125,13 @@ export function VenueDetail({ id, backHref = "/venues" }: { id: string; backHref
         </div>
       )}
 
-      {state.status === "done" && <VenueContent key={state.venue.id} venue={state.venue} />}
+      {state.status === "done" && (
+        <VenueContent
+          key={state.venue.id}
+          venue={state.venue}
+          onChange={(patch) => setState({ status: "done", venue: { ...state.venue, ...patch } })}
+        />
+      )}
     </main>
   );
 }
@@ -143,10 +149,14 @@ function DetailSkeleton() {
   );
 }
 
-function VenueContent({ venue }: { venue: Venue }) {
-  const { user } = useAuth();
+function VenueContent({
+  venue,
+  onChange,
+}: {
+  venue: Venue;
+  onChange: (patch: Pick<Venue, "active" | "deactivatedAt">) => void;
+}) {
   const [selectedSport, setSelectedSport] = useState("");
-  const isManager = Boolean(user?.roles.includes("MANAGER"));
   const sports = sportsOf(venue);
   const today = todayDayOfWeek();
   const hoursByDay = new Map(venue.openingHours.map((hours) => [hours.dayOfWeek, hours]));
@@ -178,6 +188,8 @@ function VenueContent({ venue }: { venue: Venue }) {
         </div>
       </header>
 
+      <DeactivatedNotice venue={venue} />
+
       <div className="mt-6 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
         <div className="min-w-0">
           <figure className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-surface sm:aspect-[2.3/1]">
@@ -193,7 +205,7 @@ function VenueContent({ venue }: { venue: Venue }) {
           <section id="kurty" className="scroll-mt-28 pt-8" aria-labelledby="courts-title">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 id="courts-title" className="font-display text-2xl font-semibold tracking-tight">Kurty a hřiště</h2>
-              {isManager && <Link href={`/venues/${venue.id}/courts/new`} className="button button-outline min-h-11 gap-2 px-4 py-2"><Plus size={16} aria-hidden="true" /> Přidat kurt</Link>}
+              {venue.isOwner && <Link href={`/venues/${venue.id}/courts/new`} className="button button-outline min-h-11 gap-2 px-4 py-2"><Plus size={16} aria-hidden="true" /> Přidat kurt</Link>}
             </div>
             {sports.length > 1 && (
               <div className="mt-4 flex flex-wrap gap-2" aria-label="Filtrovat kurty podle sportu">
@@ -252,6 +264,7 @@ function VenueContent({ venue }: { venue: Venue }) {
             <a href={mapHref} target="_blank" rel="noopener noreferrer" className="button button-dark mt-5 w-full gap-2">Otevřít v mapách <ArrowUpRight size={18} aria-hidden="true" /><span className="sr-only"> (nové okno)</span></a>
             {venue.courts.length > 0 && <a href="#kurty" className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium hover:bg-page">Prohlédnout kurty <ArrowDown size={16} aria-hidden="true" /></a>}
           </div>
+          {venue.isOwner && <VenueManagement venue={venue} onChange={onChange} />}
         </aside>
       </div>
     </>

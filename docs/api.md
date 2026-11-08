@@ -94,19 +94,28 @@ Když `response.ok` je `false`, zobrazte `message` první položky v `uuAppError
 * **dtoIn (query):** `id` (UUID).
 * **Chyby:** `venueImage/get/invalidDtoIn` (400), `venueImage/get/venueImageDoesNotExist` (404).
 
+### `POST venue/setActive`
+* **Popis:** Deaktivace nebo opětovná aktivace sportoviště (BUC Správce deaktivuje sportoviště). Sportoviště se nemaže.
+* **Práva:** Správce (role `PLAYER` + `MANAGER`), který sportoviště založil.
+* **dtoIn (JSON):** `id` (UUID), `active` (boolean).
+* **dtoOut:** `id, name, active, deactivatedAt` (`null` u aktivního).
+* **Poznámka:** Deaktivované sportoviště se nevrací ve `venue/list`; kurty, hodnocení a rezervace zůstávají. Opakované volání se stejnou hodnotou nic nemění. `reservation/create` (S2) musí deaktivované sportoviště odmítnout.
+* **Chyby:** `venue/setActive/invalidDtoIn` (400), `notAuthenticated` (401), `notAuthorized` (403 – není vlastník), `venue/setActive/venueDoesNotExist` (404), varování `venue/setActive/unsupportedKeys`.
+
 ### `GET venue/list`
 * **Popis:** Vyhledání sportovišť podle sportu a města (US 6, BUC 3).
 * **Práva:** Návštěvník (nepřihlášený) i Hráč.
 * **dtoIn (query):** `city?`, `sport?`, `pageIndex?` (od 0), `pageSize?` (1–100, výchozí 20). Filtry fungují samostatně i společně; `city` i `sport` ignorují velikost písmen a diakritiku (`plzen` = `Plzeň`). Prázdný text = bez filtru.
 * **dtoOut:** `itemList: [{ id, name, city, imageUrl, sports: [] }]` seřazené podle názvu, `pageInfo: { pageIndex, pageSize, total }`.
-* **Poznámka:** Vrací jen sportoviště, která mají alespoň jeden kurt.
+* **Poznámka:** Vrací jen aktivní sportoviště, která mají alespoň jeden kurt.
 * **Chyby:** `venue/list/invalidDtoIn` (400), varování `venue/list/unsupportedKeys`.
 
 ### `GET venue/get`
 * **Popis:** Detail konkrétního sportoviště (US 6, BUC 3).
 * **Práva:** Návštěvník i Hráč.
 * **dtoIn (query):** `id` (UUID, povinné).
-* **dtoOut:** `id, name, address, city, description, imageUrl, openingHours: [{ dayOfWeek, openTime, closeTime }], courts: [{ id, name, sport, surface, indoor }]`. Čas je `"HH:MM"`, `dayOfWeek` 1–7 (Po–Ne).
+* **dtoOut:** `id, name, address, city, description, imageUrl, active, deactivatedAt, isOwner, openingHours: [{ dayOfWeek, openTime, closeTime }], courts: [{ id, name, sport, surface, indoor }]`. Čas je `"HH:MM"`, `dayOfWeek` 1–7 (Po–Ne).
+* **Deaktivace:** detail vrací i deaktivované sportoviště (`active: false`, `deactivatedAt`), aby odkazy fungovaly a frontend mohl zobrazit upozornění. `isOwner` je `true` jen tehdy, když požadavek nese platný JWT vlastníka; gateway u veřejných endpointů token volitelně ověří a identitu předá službě.
 * **Chyby:** `venue/get/invalidDtoIn` (400), `venue/get/venueDoesNotExist` (404), varování `venue/get/unsupportedKeys`.
 
 `imageUrl` je cesta k fotce sportoviště (např. `/images/venues/padel.webp`) nebo `null`, když fotka není; frontend pak použije fotku podle sportu.

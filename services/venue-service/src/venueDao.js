@@ -11,6 +11,7 @@ export function createVenueDao(db) {
           name: true,
           city: true,
           imageUrl: true,
+          deactivatedAt: true,
           courts: { select: { sport: true } },
         },
       });
@@ -26,6 +27,8 @@ export function createVenueDao(db) {
           city: true,
           description: true,
           imageUrl: true,
+          managerId: true,
+          deactivatedAt: true,
           openingHours: {
             orderBy: { dayOfWeek: "asc" },
             select: { dayOfWeek: true, openTime: true, closeTime: true },
