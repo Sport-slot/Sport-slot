@@ -2,6 +2,7 @@ export const routes = [
 	{ prefix: '/api/auth', service: 'auth' },
 	{ prefix: '/api/user', service: 'auth' },
 	{ prefix: '/api/venue', service: 'venue' },
+	{ prefix: '/api/venueImage', service: 'venue' },
 	{ prefix: '/api/court', service: 'venue' },
 	{ prefix: '/api/priceRule', service: 'venue' },
 	{ prefix: '/api/reservation', service: 'reservation' },

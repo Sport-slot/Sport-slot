@@ -75,10 +75,24 @@ Když `response.ok` je `false`, zobrazte `message` první položky v `uuAppError
 ### `POST venue/create`
 * **Popis:** Založení nového sportoviště (US 3, BUC 1).
 * **Práva:** Správce (role `PLAYER` + `MANAGER`). Vlastníkem sportoviště se stane přihlášený uživatel.
-* **dtoIn (JSON):** `name` (1–100 znaků), `address` (1–200), `city` (1–100), `description?` (max. 2000), `openingHoursList: [{ dayOfWeek, openTime, closeTime }]` – 1 až 7 položek, každý den nejvýš jednou, `dayOfWeek` 1–7 (Po–Ne), časy `"HH:MM"`, zavření po otevření. Texty se ořezávají o mezery.
-* **dtoOut:** `id, managerId, name, address, city, description, createdAt, openingHoursList` (seřazené podle dne).
+* **dtoIn (JSON):** `name` (1–100 znaků), `address` (1–200), `city` (1–100), `description?` (max. 2000), `openingHoursList: [{ dayOfWeek, openTime, closeTime }]` – 1 až 7 položek, každý den nejvýš jednou, `dayOfWeek` 1–7 (Po–Ne), časy `"HH:MM"`, zavření po otevření, `imageUrl?` (odkaz z `venueImage/upload` nahraný stejným správcem, nebo ilustrační fotka `/images/venues/*.webp`). Texty se ořezávají o mezery.
+* **dtoOut:** `id, managerId, name, address, city, description, imageUrl, createdAt, openingHoursList` (seřazené podle dne).
 * **Poznámka:** Sportoviště i otevírací doba se uloží v jednom zápisu. Ve vyhledávání se zobrazí až po přidání prvního kurtu.
 * **Chyby:** `venue/create/invalidDtoIn` (400, klíče položek např. `openingHoursList[0].closeTime`), `notAuthenticated` (401), `notAuthorized` (403), `venue/create/venueAlreadyExists` (409 – stejný název, adresa a město), varování `venue/create/unsupportedKeys`.
+
+### `POST venueImage/upload`
+* **Popis:** Nahrání hlavní fotky sportoviště před jeho založením (průvodce „Nové sportoviště", krok Fotka).
+* **Práva:** Správce (role `PLAYER` + `MANAGER`).
+* **dtoIn:** tělo požadavku jsou přímo bajty obrázku, `Content-Type` `image/jpeg`, `image/png` nebo `image/webp`, max. 3 MB. Server ověří, že obsah odpovídá deklarovanému formátu. Frontend fotku před nahráním zmenší (delší strana max. 1920 px, WebP).
+* **dtoOut:** `id, imageUrl` (`/venueImage/get?id=…`), `contentType, size, createdAt`.
+* **Poznámka:** Fotka se ukládá do tabulky `venue.venue_images` (sloupec `bytea`). Ke sportovišti se připojí předáním `imageUrl` do `venue/create`.
+* **Chyby:** `venueImage/upload/invalidDtoIn` (400, prázdné tělo), `notAuthenticated` (401), `notAuthorized` (403), `venueImage/upload/imageTooLarge` (413), `venueImage/upload/unsupportedImageType` (415).
+
+### `GET venueImage/get`
+* **Popis:** Vrátí bajty nahrané fotky s hlavičkou `Cache-Control: public, max-age=31536000, immutable`.
+* **Práva:** Veřejné.
+* **dtoIn (query):** `id` (UUID).
+* **Chyby:** `venueImage/get/invalidDtoIn` (400), `venueImage/get/venueImageDoesNotExist` (404).
 
 ### `GET venue/list`
 * **Popis:** Vyhledání sportovišť podle sportu a města (US 6, BUC 3).

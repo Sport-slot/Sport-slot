@@ -137,6 +137,7 @@ export type VenueCreateDtoIn = {
   address: string;
   city: string;
   description?: string;
+  imageUrl?: string;
   openingHoursList: OpeningHoursDtoIn[];
 };
 
@@ -147,6 +148,7 @@ export type Venue = {
   address: string;
   city: string;
   description?: string;
+  imageUrl?: string | null;
   createdAt: string;
   openingHoursList: OpeningHoursDtoIn[];
   uuAppErrorMap: UuAppErrorMap;
