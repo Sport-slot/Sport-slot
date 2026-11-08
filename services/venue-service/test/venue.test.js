@@ -7,6 +7,7 @@ const SPORTCENTRUM = '00000000-0000-4000-8000-000000000101'
 const PLZEN = '00000000-0000-4000-8000-000000000102'
 const EMPTY = '00000000-0000-4000-8000-000000000103'
 const MISSING = '00000000-0000-4000-8000-000000000999'
+const DEACTIVATED = '00000000-0000-4000-8000-000000000104'
 
 const venues = [
 	{
@@ -33,6 +34,17 @@ const venues = [
 		courts: [{ id: 'c3', name: 'Kurt A', sport: 'Tenis', surface: 'Antuka', indoor: false }],
 	},
 	{ id: EMPTY, name: 'Bez hřišť', address: 'Prázdná 3', city: 'Praha', description: null, openingHours: [], courts: [] },
+	{
+		id: DEACTIVATED,
+		name: 'Zavřená hala',
+		address: 'Stará 4',
+		city: 'Praha',
+		description: null,
+		managerId: '00000000-0000-4000-8000-000000000001',
+		deactivatedAt: new Date('2026-11-08T10:00:00Z'),
+		openingHours: [],
+		courts: [{ id: 'c4', name: 'Kurt Z', sport: 'tenis', surface: 'Antuka', indoor: true }],
+	},
 ]
 
 const venueDao = {
@@ -108,7 +120,7 @@ test('venue/get returns the detail without internal fields', async () => {
 	assert.equal(response.status, 200)
 	const { managerId, ...expected } = venues[0]
 	assert.ok(managerId)
-	assert.deepEqual(response.body, { ...expected, uuAppErrorMap: {} })
+	assert.deepEqual(response.body, { ...expected, active: true, deactivatedAt: null, isOwner: false, uuAppErrorMap: {} })
 })
 
 test('venue/get validates id', async () => {
@@ -129,4 +141,31 @@ test('venue/get with unknown id is 404 venueDoesNotExist', async () => {
 		message: 'Sportoviště nenalezeno.',
 		paramMap: { id: MISSING },
 	})
+})
+
+test('venue/list hides deactivated venues', async () => {
+	const response = await request(app).get('/venue/list')
+	assert.equal(response.status, 200)
+	assert.ok(!response.body.itemList.some((venue) => venue.id === DEACTIVATED))
+})
+
+test('venue/get still returns a deactivated venue with its state', async () => {
+	const response = await request(app).get('/venue/get').query({ id: DEACTIVATED })
+	assert.equal(response.status, 200)
+	assert.equal(response.body.active, false)
+	assert.equal(response.body.deactivatedAt, '2026-11-08T10:00:00.000Z')
+	assert.equal(response.body.managerId, undefined)
+	assert.equal(response.body.isOwner, false)
+})
+
+test('venue/get marks the owner only when identity comes through the gateway', async () => {
+	const gatewaySecret = 'test-gateway-secret-at-least-32-characters'
+	const securedApp = createApp({ venueDao, gatewaySecret })
+	const owner = '00000000-0000-4000-8000-000000000001'
+
+	const viaGateway = await request(securedApp).get('/venue/get').query({ id: DEACTIVATED }).set({ 'x-gateway-secret': gatewaySecret, 'x-user-id': owner })
+	assert.equal(viaGateway.body.isOwner, true)
+
+	const spoofed = await request(securedApp).get('/venue/get').query({ id: DEACTIVATED }).set({ 'x-gateway-secret': 'wrong', 'x-user-id': owner })
+	assert.equal(spoofed.body.isOwner, false)
 })

@@ -2,6 +2,7 @@ import express from "express";
 import { createCourtRouter } from "./routes/court.js";
 import { createVenueCreateRouter } from "./routes/venueCreate.js";
 import { createVenueImageRouter } from "./routes/venueImage.js";
+import { createVenueSetActiveRouter } from "./routes/venueSetActive.js";
 import { getVenue, listVenues } from "./venue.js";
 import { errorHandler, notFound } from "@sportslot/api-format";
 
@@ -29,10 +30,12 @@ export function createApp({
   });
 
   app.get("/venue/get", async (req, res) => {
-    res.json(await getVenue(venueDao, req));
+    res.json(await getVenue(venueDao, req, { gatewaySecret }));
   });
 
   app.use("/venue", createVenueCreateRouter({ db, gatewaySecret }));
+
+  app.use("/venue", createVenueSetActiveRouter({ db, gatewaySecret }));
 
   app.use("/venueImage", createVenueImageRouter({ db, gatewaySecret }));
 

@@ -30,6 +30,7 @@ const PUBLIC_ENDPOINTS = new Set([
 
 const MANAGER_ENDPOINTS = new Set([
   "POST /api/venue/create",
+  "POST /api/venue/setActive",
   "POST /api/venueImage/upload",
   "POST /api/court/create",
   "POST /api/priceRule/create",
@@ -110,6 +111,13 @@ export function createApp(
     }
 
     if (PUBLIC_ENDPOINTS.has(endpoint)) {
+      if (authenticate && req.get("authorization")?.startsWith("Bearer ")) {
+        return authenticate(req, res, (error) => {
+          if (error) delete req.auth;
+          next();
+        });
+      }
+
       return next();
     }
 

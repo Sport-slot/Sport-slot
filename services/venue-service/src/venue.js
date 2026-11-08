@@ -64,6 +64,7 @@ export async function listVenues(venueDao, req) {
 	// shortcut: filtruje a stránkuje v JS nad všemi sportovišti; přesunout do SQL, až jich budou tisíce.
 	const matching = (await venueDao.list())
 		.filter((venue) => venue.courts.length > 0) // AC6: sportoviště bez hřišť se nezobrazují
+		.filter((venue) => !venue.deactivatedAt)
 		.map((venue) => ({
 			id: venue.id,
 			name: venue.name,
@@ -82,7 +83,14 @@ export async function listVenues(venueDao, req) {
 	}
 }
 
-export async function getVenue(venueDao, req) {
+function viewerIdFromGateway(req, gatewaySecret) {
+	if (typeof gatewaySecret !== 'string' || gatewaySecret.length < 32) return null
+	if (req.get('x-gateway-secret') !== gatewaySecret) return null
+	const userId = req.get('x-user-id')
+	return userId && UUID.test(userId) ? userId : null
+}
+
+export async function getVenue(venueDao, req, { gatewaySecret } = {}) {
 	const dtoIn = req.query
 	const { id } = dtoIn
 	if (id === undefined) throw invalidDtoIn({ missingKeyMap: { id: 'Klíč id je povinný.' } })
@@ -100,6 +108,9 @@ export async function getVenue(venueDao, req) {
 		city,
 		description,
 		imageUrl: venue.imageUrl ?? null,
+		active: !venue.deactivatedAt,
+		deactivatedAt: venue.deactivatedAt ?? null,
+		isOwner: Boolean(venue.managerId) && venue.managerId === viewerIdFromGateway(req, gatewaySecret),
 		openingHours,
 		courts,
 		uuAppErrorMap: unsupportedKeys(req, dtoIn, ['id']),

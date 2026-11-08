@@ -26,6 +26,7 @@ The database schema and initial migration are implemented and deployed. Backend 
 | Initial migration | `20261030_init` |
 | Venue photo URL | `20261107_venue_image_url` |
 | Uploaded venue photos | `20261108_venue_images` |
+| Venue deactivation | `20261108_venue_deactivation` |
 | Tables | 10 across 5 schemas |
 
 The shared database is a development environment, but its Supabase main branch is labeled **PRODUCTION**. All schema changes must be coordinated.

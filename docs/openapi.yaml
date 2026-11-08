@@ -349,6 +349,9 @@ paths:
                   city: { type: string }
                   description: { type: string, nullable: true }
                   imageUrl: { type: string, nullable: true, example: /images/venues/padel.webp }
+                  active: { type: boolean, description: false u deaktivovaného sportoviště }
+                  deactivatedAt: { type: string, format: date-time, nullable: true }
+                  isOwner: { type: boolean, description: true jen pro přihlášeného vlastníka (volitelný Bearer token) }
                   openingHours:
                     type: array
                     items: { $ref: '#/components/schemas/OpeningHours' }
@@ -357,6 +360,40 @@ paths:
                     items: { $ref: '#/components/schemas/Court' }
                   uuAppErrorMap: { $ref: '#/components/schemas/UuAppErrorMap' }
         '400': { $ref: '#/components/responses/InvalidDtoIn' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/venue/setActive:
+    post:
+      tags: [Venue]
+      summary: Deaktivace nebo opětovná aktivace sportoviště
+      description: Jen pro roli MANAGER, který je vlastníkem sportoviště. Deaktivované sportoviště se nezobrazuje ve vyhledávání; data zůstávají.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, active]
+              properties:
+                id: { type: string, format: uuid }
+                active: { type: boolean, example: false }
+      responses:
+        '200':
+          description: Aktuální stav sportoviště
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  name: { type: string }
+                  active: { type: boolean }
+                  deactivatedAt: { type: string, format: date-time, nullable: true }
+                  uuAppErrorMap: { $ref: '#/components/schemas/UuAppErrorMap' }
+        '400': { $ref: '#/components/responses/InvalidDtoIn' }
+        '401': { $ref: '#/components/responses/NotAuthenticated' }
+        '403': { $ref: '#/components/responses/NotAuthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
   /api/court/create:
     post:
