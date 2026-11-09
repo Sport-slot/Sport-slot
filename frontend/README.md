@@ -36,7 +36,7 @@ Dokud není hotové `user/me`, lze použít mock uživatele (`visitor`, `player`
 NEXT_PUBLIC_MOCK_ROLE=manager npm run dev:frontend
 ```
 
-`NEXT_PUBLIC_MOCK_ROLE` je jen pro lokální vývoj – nikdy ho nenastavujte na Netlify. Hodnota se vkládá do buildu, takže by se tam každý návštěvník stal mock uživatelem.
+`NEXT_PUBLIC_MOCK_ROLE` je jen pro lokální vývoj – nikdy ho nenastavujte na Vercelu. Hodnota se vkládá do buildu, takže by se tam každý návštěvník stal mock uživatelem.
 
 ## Přihlášení
 

@@ -20,4 +20,4 @@ services:
       - key: GOOGLE_CLIENT_ID
         value: 761406248105-u0v6ac0fif8gj3njrp43l4thteicpqkv.apps.googleusercontent.com
       - key: FRONTEND_ORIGIN
-        value: https://sport-slot.netlify.app
+        value: https://sport-slot.vercel.app,https://sport-slot.netlify.app

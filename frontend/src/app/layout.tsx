@@ -6,8 +6,15 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { LoginDialog } from "@/components/LoginDialog";
 
+const vercelProductionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : undefined;
+
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || process.env.URL || "http://localhost:3000";
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  vercelProductionUrl ||
+  process.env.URL ||
+  "http://localhost:3000";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
