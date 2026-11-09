@@ -59,7 +59,7 @@ Stejné kontroly spustíte lokálně příkazy `npm run lint`, `npm test` a `npm
 
 | Část | Kde | Adresa |
 |---|---|---|
-| Frontend | Netlify | https://sport-slot.netlify.app |
+| Frontend | Vercel, projekt `sport-slot` | https://sport-slot.vercel.app |
 | Backend (gateway + služby) | Render, služba `sport-slot-api` | https://sport-slot-api.onrender.com |
 | Databáze | Supabase | viz `db/README.md` |
 
@@ -73,15 +73,21 @@ Nastavení je v `render.yaml` (Render Blueprint):
 
 Free služba po 15 minutách nečinnosti usne a první požadavek pak trvá asi minutu. Před demem ji probuďte otevřením `/health`.
 
-### Frontend na Netlify
-V Site configuration → Environment variables nastavit a pak spustit nový deploy:
+### Frontend na Vercelu
+Nastavení projektu (Settings → Build and Deployment):
+* Root Directory: `frontend`, Framework Preset: Next.js, zapnuté „Include files outside the root directory“ (kvůli npm workspaces a kořenovému `package-lock.json`).
+* Install a Build Command ponechat výchozí. Instalace jen frontendu nespouští `prisma generate`, Prisma klient se generuje až při instalaci balíčku `db`.
+
+V Settings → Environment Variables nastavit a pak spustit nový deploy:
 * `NEXT_PUBLIC_API_URL` = `https://sport-slot-api.onrender.com/api`
 * `NEXT_PUBLIC_GOOGLE_CLIENT_ID` = Client ID z `.env.example`
 
-`NEXT_PUBLIC_MOCK_ROLE` na Netlify nikdy nenastavujte.
+`NEXT_PUBLIC_MOCK_ROLE` na Vercelu nikdy nenastavujte.
+
+Adresa frontendu musí být v `FRONTEND_ORIGIN` na Renderu (víc adres oddělte čárkou), jinak gateway zablokuje požadavky přes CORS. Dřívější frontend na Netlify (https://sport-slot.netlify.app) už se neaktualizuje, jeho adresa v `FRONTEND_ORIGIN` zůstává jen kvůli kompatibilitě.
 
 ### Google přihlášení
-OAuth Client ID (projekt `sportslot-513614`) musí mít v Google Cloud Console → Credentials v **Authorized JavaScript origins** adresu frontendu (`https://sport-slot.netlify.app`) a pro lokální vývoj `http://localhost:3000`. Redirect URI ani client secret aplikace nepoužívá – frontend dostane ID token přímo od Google a backend ho ověří proti Client ID. Client secret do repozitáře nepatří.
+OAuth Client ID (projekt `sportslot-513614`) musí mít v Google Cloud Console → Credentials v **Authorized JavaScript origins** adresu frontendu (`https://sport-slot.vercel.app`) a pro lokální vývoj `http://localhost:3000`. Redirect URI ani client secret aplikace nepoužívá – frontend dostane ID token přímo od Google a backend ho ověří proti Client ID. Client secret do repozitáře nepatří.
 
 ## Fotky sportovišť
 

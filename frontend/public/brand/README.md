@@ -71,4 +71,4 @@ Backend, databáze a autentizace se tímto úkolem neimplementují. Žádné zm�
 
 Před zveřejněním ověřte desktop i mobil, světlý/tmavý režim, klávesnici, otevření a zavření dialogu, výběr termínu, pauzu videa a reduced motion ve skutečném prohlížeči. Automatický browser byl v této relaci zablokovaný sandboxem, proto vizuální kontrola celé stránky není potvrzená.
 
-Pro produkční sdílecí odkazy nastavte `NEXT_PUBLIC_SITE_URL` na skutečnou adresu nasazeného frontendu. Na Netlify se použije také automatická proměnná `URL`, na Vercelu `VERCEL_URL`. Lokální fallback je `http://localhost:3000`; není zvolena ani přivlastněna doména sportelo.cz.
+Pro produkční sdílecí odkazy nastavte `NEXT_PUBLIC_SITE_URL` na skutečnou adresu nasazeného frontendu. Bez ní se na Vercelu použije produkční adresa projektu (`VERCEL_PROJECT_PRODUCTION_URL`), na Netlify proměnná `URL`. Lokální fallback je `http://localhost:3000`; není zvolena ani přivlastněna doména sportelo.cz.
