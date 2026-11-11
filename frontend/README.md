@@ -9,6 +9,11 @@ npm run dev:frontend # http://localhost:3000
 ```
 
 Adresu API gateway čte aplikace z `NEXT_PUBLIC_API_URL` (viz `.env.example`).
+
+### Lokální ukázka detailu sportoviště
+
+Po spuštění `npm run dev:frontend` otevřete [localhost:3000/venues/preview](http://localhost:3000/venues/preview). Stránka používá skutečnou komponentu detailu s ukázkovými daty podle seedu Sportcentra; nepotřebuje API ani databázi. Fungují filtry sportů, zvětšení fotografie a kopírování odkazu. Ukázka je dostupná pouze ve vývojovém režimu, v produkci vrací 404.
+
 Styling je v Tailwind CSS v4 (dohodnuto v týmu 4. 11. 2026). Layouty používají utility třídy v `className`; `globals.css` obsahuje barevné tokeny, několik sdílených komponentových tříd a přístupné animace. Vlastní hodnoty patří do bloku `@theme`, samostatný `tailwind.config` není potřeba.
 
 ### Brand
