@@ -1,4 +1,4 @@
-function toHourMinute(time) {
+export function toHourMinute(time) {
   return time.toISOString().slice(11, 16);
 }
 

@@ -1,5 +1,6 @@
 import express from "express";
 import { createCourtRouter } from "./routes/court.js";
+import { createCourtAvailabilityRouter } from "./routes/courtAvailability.js";
 import { createVenueCreateRouter } from "./routes/venueCreate.js";
 import { createVenueImageRouter } from "./routes/venueImage.js";
 import { createVenueSetActiveRouter } from "./routes/venueSetActive.js";
@@ -43,6 +44,8 @@ export function createApp({
   app.use("/venueImage", createVenueImageRouter({ db, gatewaySecret }));
 
   app.use("/court", createCourtRouter({ db, gatewaySecret }));
+
+  app.use("/court", createCourtAvailabilityRouter({ db }));
 
   app.use(notFound);
   app.use(errorHandler);
