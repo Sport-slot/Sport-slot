@@ -6,7 +6,8 @@
 		"gateway",
 		"services/*",
 		"packages/*",
-		"db"
+		"db",
+		"e2e"
 	],
 	"engines": {
 		"node": ">=22"
@@ -16,7 +17,8 @@
 		"test": "npm run test --workspaces --if-present",
 		"build": "npm run build --workspaces --if-present",
 		"dev:frontend": "npm run dev --workspace frontend",
-		"dev:gateway": "npm run dev --workspace gateway"
+		"dev:gateway": "npm run dev --workspace gateway",
+		"test:e2e": "npm run e2e --workspace e2e"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.39.5",
