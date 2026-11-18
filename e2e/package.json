@@ -1,0 +1,8 @@
+{
+  "name": "@sportslot/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e": "node --test --test-concurrency=1 \"test/**/*.e2e.test.js\""
+  }
+}
