@@ -13,6 +13,7 @@ tags:
   - name: Auth
   - name: Venue
   - name: Court
+  - name: Reservation
 components:
   securitySchemes:
     bearerAuth:
@@ -536,6 +537,60 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
           description: Sportoviště je deaktivované (`venueIsNotActive`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /api/reservation/create:
+    post:
+      tags: [Reservation]
+      summary: Hráč vytvoří rezervaci (US 6)
+      description: |
+        Pro přihlášeného hráče. Rezervace trvá celé hodiny, začíná na hodinovém slotu v otevírací době, musí být v budoucnosti
+        a nesmí se překrývat s aktivní rezervací kurtu. Cena se spočítá z ceníku kurtu. Deaktivované sportoviště rezervace nepřijímá.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [courtId, startAt, endAt]
+              properties:
+                courtId: { type: string, format: uuid, example: 00000000-0000-4000-8000-000000000202 }
+                startAt: { type: string, format: date-time, example: '2026-11-25T14:00:00Z' }
+                endAt: { type: string, format: date-time, example: '2026-11-25T16:00:00Z' }
+      responses:
+        '200':
+          description: Rezervace vytvořena
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  courtId: { type: string, format: uuid }
+                  courtName: { type: string }
+                  venueId: { type: string, format: uuid }
+                  venueName: { type: string }
+                  playerId: { type: string, format: uuid }
+                  playerName: { type: string }
+                  startAt: { type: string, format: date-time }
+                  endAt: { type: string, format: date-time }
+                  totalPrice: { type: number, example: 300 }
+                  status: { type: string, enum: [ACTIVE, CANCELLED] }
+                  createdAt: { type: string, format: date-time }
+                  uuAppErrorMap: { $ref: '#/components/schemas/UuAppErrorMap' }
+        '400':
+          description: Neplatný vstup (`invalidDtoIn`), termín v minulosti (`reservationInPast`), mimo otevírací dobu (`outsideOpeningHours`) nebo bez ceny (`priceNotSet`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401': { $ref: '#/components/responses/NotAuthenticated' }
+        '403': { $ref: '#/components/responses/NotAuthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Termín je obsazený (`slotNotAvailable`) nebo sportoviště je deaktivované (`venueIsNotActive`).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
