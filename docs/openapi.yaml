@@ -594,3 +594,47 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /api/reservation/cancel:
+    post:
+      tags: [Reservation]
+      summary: Hráč zruší svou rezervaci (US 8)
+      description: Jen vlastní rezervaci a nejpozději 24 hodin před začátkem. Už zrušená rezervace se nemění a vrátí se její stav.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Rezervace je zrušená
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  courtId: { type: string, format: uuid }
+                  venueId: { type: string, format: uuid }
+                  playerId: { type: string, format: uuid }
+                  playerName: { type: string }
+                  startAt: { type: string, format: date-time }
+                  endAt: { type: string, format: date-time }
+                  totalPrice: { type: number, example: 300 }
+                  status: { type: string, enum: [ACTIVE, CANCELLED] }
+                  createdAt: { type: string, format: date-time }
+                  cancelledAt: { type: string, format: date-time, nullable: true }
+                  uuAppErrorMap: { $ref: '#/components/schemas/UuAppErrorMap' }
+        '400':
+          description: Neplatný vstup (`invalidDtoIn`) nebo méně než 24 hodin do začátku (`cancellationTooLate`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401': { $ref: '#/components/responses/NotAuthenticated' }
+        '403': { $ref: '#/components/responses/NotAuthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }

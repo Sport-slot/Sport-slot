@@ -255,3 +255,15 @@ Endpointy zajišťuje `reservation-service`.
   * Aktivní rezervace stejného kurtu se nesmí překrývat. Hlídá to i databáze, takže ze dvou současných požadavků na stejný termín projde jen jeden.
   * Rezervace a záznam do audit logu (`reservation/create`) se uloží v jednom zápisu.
 * **Chyby:** `reservation/create/invalidDtoIn` (400, mj. rezervace, která netrvá celé hodiny), `reservation/create/reservationInPast` (400), `reservation/create/outsideOpeningHours` (400, `paramMap`: `date, openTime, closeTime`), `reservation/create/priceNotSet` (400, `paramMap`: `startTime, endTime` hodiny bez ceny), `reservation/create/notAuthenticated` (401), `reservation/create/notAuthorized` (403), `reservation/create/courtDoesNotExist` (404), `reservation/create/venueIsNotActive` (409), `reservation/create/slotNotAvailable` (409), varování `reservation/create/unsupportedKeys`.
+
+### `POST reservation/cancel`
+* **Popis:** Hráč zruší svou rezervaci (US 8).
+* **Práva:** Přihlášený hráč (role `PLAYER`), jen vlastní rezervaci.
+* **dtoIn (JSON):** `id` (UUID rezervace).
+* **dtoOut:** `id, courtId, venueId, playerId, playerName, startAt, endAt, totalPrice, status, createdAt, cancelledAt`.
+* **Pravidla:**
+  * Zrušit lze nejpozději 24 hodin před začátkem rezervace.
+  * Rezervace se nemaže, dostane stav `CANCELLED` a čas zrušení; termín se tím uvolní pro ostatní.
+  * Už zrušená rezervace se nemění a vrátí se její aktuální stav (opakované volání je bezpečné).
+  * Zrušení a záznam do audit logu (`reservation/cancel`) se uloží v jednom zápisu.
+* **Chyby:** `reservation/cancel/invalidDtoIn` (400), `reservation/cancel/cancellationTooLate` (400, `paramMap`: `startAt, cancellableUntil`), `reservation/cancel/notAuthenticated` (401), `reservation/cancel/notAuthorized` (403, cizí rezervace), `reservation/cancel/reservationDoesNotExist` (404), varování `reservation/cancel/unsupportedKeys`.
