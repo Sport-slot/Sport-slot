@@ -28,6 +28,10 @@ before(async () => {
     res.json({ headers: req.headers });
   });
 
+  venue.get("/court/availability", (req, res) => {
+    res.json({ headers: req.headers });
+  });
+
   venue.post("/court/create", (req, res) => {
     res.json({ headers: req.headers });
   });
@@ -259,4 +263,14 @@ test("public court/list stays anonymous with an invalid JWT", async () => {
 
   assert.equal(response.status, 200);
   assert.equal(response.body.headers["x-user-id"], undefined);
+});
+
+test("public court/availability is reachable without a JWT", async () => {
+  const response = await request(createApp(serviceUrls, CONFIG)).get(
+    "/api/court/availability",
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.headers["x-user-id"], undefined);
+  assert.equal(response.body.headers["x-gateway-secret"], GATEWAY_SECRET);
 });

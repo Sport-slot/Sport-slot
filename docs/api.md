@@ -145,6 +145,14 @@ Hodnocení (průměr recenzí) zatím venue/list ani venue/get nevrací. Recenze
 * **dtoOut:** `itemList: [{ id, venueId, name, sport, surface, indoor }]` seřazené podle názvu, `pageInfo`.
 * **Chyby:** `court/list/invalidDtoIn` (400), `court/list/venueDoesNotExist` (404).
 
+### `GET court/availability`
+* **Popis:** Volné a obsazené termíny kurtu pro zvolený den (US 5).
+* **Práva:** Návštěvník i Hráč.
+* **dtoIn (query):** `courtId` (UUID), `date` (`YYYY-MM-DD`, místní datum v Praze).
+* **dtoOut:** `courtId, venueId, date, dayOfWeek` (1–7, Po–Ne), `openTime, closeTime` (`"HH:MM"`, `null` když je v ten den zavřeno), `slotList: [{ startTime, endTime, startAt, endAt, free }]`. `startTime`/`endTime` jsou místní `"HH:MM"`, `startAt`/`endAt` okamžik v ISO 8601 (UTC) pro `reservation/create`.
+* **Poznámka:** Sloty jsou hodinové od otevření; zbytek kratší než hodina se nevrací. Slot je obsazený, když ho aspoň částečně překrývá rezervace se stavem `ACTIVE` (zrušená termín uvolní). Slot, který už začal, není volný. Cenu slotu zatím nevrací (ceník US 7 se dělá v S2W1).
+* **Chyby:** `court/availability/invalidDtoIn` (400), `court/availability/courtDoesNotExist` (404), `court/availability/venueIsNotActive` (409), varování `court/availability/unsupportedKeys`.
+
 ## 3. Ceníky a pravidla (PriceRule)
 
 ### `POST priceRule/create`
