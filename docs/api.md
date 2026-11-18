@@ -229,3 +229,21 @@ Authorization: Bearer <JWT_TOKEN>
 
 Role se čtou z databáze, takže změna role (např. schválení správce) se projeví hned, bez nového přihlášení. JWT ale nese role z okamžiku přihlášení – oprávnění na gateway se změní až s novým tokenem.
 
+
+## 6. Rezervace (Reservation)
+
+Endpointy zajišťuje `reservation-service`.
+
+### `POST reservation/create`
+* **Popis:** Hráč vytvoří rezervaci volného termínu kurtu (US 6).
+* **Práva:** Přihlášený hráč (role `PLAYER`). Rezervace patří přihlášenému uživateli.
+* **dtoIn (JSON):** `courtId` (UUID), `startAt`, `endAt` (datum a čas v ISO 8601 s časovou zónou, např. `startAt`/`endAt` slotu z `court/availability`).
+* **dtoOut:** `id, courtId, courtName, venueId, venueName, playerId, playerName, startAt, endAt, totalPrice, status` (`ACTIVE`), `createdAt`.
+* **Pravidla:**
+  * Rezervace trvá celé hodiny a začíná na hodinovém slotu od otevření sportoviště (pražský čas).
+  * Termín musí být v budoucnosti a celý v otevírací době toho dne.
+  * Deaktivované sportoviště rezervace nepřijímá.
+  * Cena je součet hodinových cen z ceníku kurtu pro daný den a čas; hodina bez ceny rezervovat nejde.
+  * Aktivní rezervace stejného kurtu se nesmí překrývat. Hlídá to i databáze, takže ze dvou současných požadavků na stejný termín projde jen jeden.
+  * Rezervace a záznam do audit logu (`reservation/create`) se uloží v jednom zápisu.
+* **Chyby:** `reservation/create/invalidDtoIn` (400, mj. rezervace, která netrvá celé hodiny), `reservation/create/reservationInPast` (400), `reservation/create/outsideOpeningHours` (400, `paramMap`: `date, openTime, closeTime`), `reservation/create/priceNotSet` (400, `paramMap`: `startTime, endTime` hodiny bez ceny), `reservation/create/notAuthenticated` (401), `reservation/create/notAuthorized` (403), `reservation/create/courtDoesNotExist` (404), `reservation/create/venueIsNotActive` (409), `reservation/create/slotNotAvailable` (409), varování `reservation/create/unsupportedKeys`.
