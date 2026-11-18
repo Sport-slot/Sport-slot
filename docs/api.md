@@ -156,12 +156,20 @@ Hodnocení (průměr recenzí) zatím venue/list ani venue/get nevrací. Recenze
 ## 3. Ceníky a pravidla (PriceRule)
 
 ### `POST priceRule/create`
-* **Popis:** Vytvoření cenového pravidla pro konkrétní kurt (US 7).
-* **Práva:** Správce.
-* **Tělo požadavku (JSON):** `courtId`, `dayOfWeek`, `startTime`, `endTime`, `pricePerHour`.
+* **Popis:** Správce přidá cenové pravidlo kurtu (US 7).
+* **Práva:** Správce (role `PLAYER` + `MANAGER`), který je vlastníkem sportoviště kurtu.
+* **dtoIn (JSON):** `courtId` (UUID), `dayOfWeek` (1–7, Po–Ne), `startTime`, `endTime` (`"HH:MM"`, `startTime` < `endTime`), `pricePerHour` (číslo v Kč, nezáporné, nejvýše 2 desetinná místa).
+* **dtoOut:** `id, courtId, dayOfWeek, startTime, endTime, pricePerHour`.
+* **Pravidla:** Pravidla stejného kurtu a dne se nesmí překrývat; navazující pravidlo (např. 07:00–16:00 a 16:00–22:00) je v pořádku. Hlídá to i databáze. Pravidlo a záznam do audit logu (`priceRule/create`) se uloží v jednom zápisu. Změna ceníku nemění cenu existujících rezervací.
+* **Chyby:** `priceRule/create/invalidDtoIn` (400), `priceRule/create/notAuthenticated` (401), `priceRule/create/notAuthorized` (403, cizí sportoviště nebo chybí role), `priceRule/create/courtDoesNotExist` (404), `priceRule/create/priceRuleOverlap` (409, `paramMap.conflictingRule`: `id, startTime, endTime` překrývajícího se pravidla), varování `priceRule/create/unsupportedKeys`.
 
 ### `GET priceRule/listByCourt`
-**Popis:** Získání ceníku kurtu. Tento endpoint bude volat `reservation-service` pro výpočet výsledné ceny rezervace (US 7). 
+* **Popis:** Ceník kurtu (US 7). Používá ho detail kurtu a `reservation/create` počítá cenu ze stejných pravidel.
+* **Práva:** Návštěvník i Hráč.
+* **dtoIn (query):** `courtId` (UUID).
+* **dtoOut:** `courtId`, `itemList: [{ id, courtId, dayOfWeek, startTime, endTime, pricePerHour }]` seřazené podle dne a času začátku.
+* **Chyby:** `priceRule/listByCourt/invalidDtoIn` (400), `priceRule/listByCourt/courtDoesNotExist` (404), varování `priceRule/listByCourt/unsupportedKeys`.
+
 ## 4. Auth – Google přihlášení
 
 ### POST /api/auth/googleCallback
