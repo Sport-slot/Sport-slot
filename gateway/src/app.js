@@ -24,6 +24,7 @@ const PUBLIC_ENDPOINTS = new Set([
   "GET /api/venue/get",
   "GET /api/venueImage/get",
   "GET /api/court/list",
+  "GET /api/court/availability",
   "GET /api/priceRule/listByCourt",
   "GET /api/review/listByVenue",
 ]);

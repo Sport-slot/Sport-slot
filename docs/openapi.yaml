@@ -491,3 +491,51 @@ paths:
                   uuAppErrorMap: { $ref: '#/components/schemas/UuAppErrorMap' }
         '400': { $ref: '#/components/responses/InvalidDtoIn' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/court/availability:
+    get:
+      tags: [Court]
+      summary: Volné termíny kurtu (US 5)
+      description: Veřejné. Hodinové sloty kurtu pro zvolený den podle otevírací doby sportoviště (pražský čas). Slot je obsazený, když ho překrývá aktivní rezervace; slot, který už začal, není volný.
+      parameters:
+        - name: courtId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          example: 00000000-0000-4000-8000-000000000202
+        - name: date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+          example: '2026-11-25'
+      responses:
+        '200':
+          description: Sloty kurtu pro zvolený den
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  courtId: { type: string, format: uuid }
+                  venueId: { type: string, format: uuid }
+                  date: { type: string, format: date }
+                  dayOfWeek: { type: integer, minimum: 1, maximum: 7 }
+                  openTime: { type: string, nullable: true, example: '07:00' }
+                  closeTime: { type: string, nullable: true, example: '22:00' }
+                  slotList:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        startTime: { type: string, example: '15:00' }
+                        endTime: { type: string, example: '16:00' }
+                        startAt: { type: string, format: date-time }
+                        endAt: { type: string, format: date-time }
+                        free: { type: boolean }
+                  uuAppErrorMap: { $ref: '#/components/schemas/UuAppErrorMap' }
+        '400': { $ref: '#/components/responses/InvalidDtoIn' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Sportoviště je deaktivované (`venueIsNotActive`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
