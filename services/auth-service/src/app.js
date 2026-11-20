@@ -8,6 +8,7 @@ import {
 	unsupportedKeys,
 } from '@sportslot/api-format'
 import { createTokenIssuer } from './token.js'
+import { createManagerRequestRouter } from './managerRequestRouter.js'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_ID_TOKEN_LENGTH = 4096
@@ -22,6 +23,8 @@ function toUserDtoOut(user) {
 
 export function createApp({
 	userDao,
+	managerRequestDao,
+	audit,
 	verifyGoogleIdToken,
 	jwtSecret = process.env.JWT_SECRET,
 	gatewaySecret = process.env.GATEWAY_SECRET,
@@ -96,6 +99,10 @@ export function createApp({
 
 		res.json({ ...toUserDtoOut(user), uuAppErrorMap: unsupportedKeys(req, req.query, []) })
 	})
+		if (managerRequestDao) {
+		app.use(createManagerRequestRouter({ userDao, managerRequestDao, gatewaySecret, audit }))
+	}
+
 
 	app.use(notFound)
 	app.use(errorHandler)

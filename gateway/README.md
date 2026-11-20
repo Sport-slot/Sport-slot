@@ -9,6 +9,7 @@ Gateway odstraňuje prefix `/api` a předává požadavek službě, která danou
 | Cesta | Služba | Výchozí port |
 |---|---|---|
 | `/api/auth/...` | auth-service | 4001 |
+| `/api/managerRequest/...` | auth-service | 4001 |
 | `/api/venue/...` | venue-service | 4002 |
 | `/api/court/...` | venue-service | 4002 |
 | `/api/priceRule/...` | venue-service | 4002 |
