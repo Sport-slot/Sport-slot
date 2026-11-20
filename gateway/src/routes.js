@@ -8,6 +8,7 @@ export const routes = [
 	{ prefix: '/api/reservation', service: 'reservation' },
 	{ prefix: '/api/review', service: 'review' },
 	{ prefix: '/api/audit', service: 'audit' },
+	{ prefix: '/api/managerRequest', service: 'auth' },
 ]
 
 export function serviceUrlsFromEnv(env = process.env) {
