@@ -31,13 +31,13 @@ SportSlot/
 
 Gateway přijímá požadavky pod prefixem `/api/` a podle cesty je předává mikroslužbě, která danou oblast vlastní. Prefix `/api` se při předání odstraňuje.
 
-| Cesta                                              | Cílová mikroslužba  |
-| -------------------------------------------------- | ------------------- |
-| `/api/auth/…`, `/api/user/…`                       | auth-service        |
-| `/api/venue/…`, `/api/court/…`, `/api/priceRule/…` | venue-service       |
-| `/api/reservation/…`                               | reservation-service |
-| `/api/review/…`                                    | review-service      |
-| `/api/audit/…`                                     | audit-service       |
+| Cesta                                                 | Cílová mikroslužba  |
+| --------------------------------------------------    | ------------------- |
+| `/api/auth/…`, `/api/user/…`, `/api/managerRequest/…` | auth-service        |
+| `/api/venue/…`, `/api/court/…`, `/api/priceRule/…`    | venue-service       |
+| `/api/reservation/…`                                  | reservation-service |
+| `/api/review/…`                                       | review-service      |
+| `/api/audit/…`                                        | audit-service       |
 
 - Adresy mikroslužeb se konfigurují pomocí proměnných prostředí `*_SERVICE_URL`. Výchozí adresy jsou `http://localhost:4001` až `http://localhost:4005`.
 - Endpoint `GET /health` slouží ke kontrole dostupnosti gateway.
@@ -48,13 +48,13 @@ Gateway přijímá požadavky pod prefixem `/api/` a podle cesty je předává m
 
 Každá mikroslužba odpovídá za určitou oblast aplikace a správu souvisejících dat.
 
-| Mikroslužba         | Port | Spravovaná data             | Odpovědnost                          |
-| ------------------- | ---- | --------------------------- | ------------------------------------ |
-| auth-service        | 4001 | users                       | Uživatelé a jejich role              |
-| venue-service       | 4002 | venues, courts, price_rules | Sportoviště, kurty a cenová pravidla |
-| reservation-service | 4003 | reservations                | Rezervace                            |
-| review-service      | 4004 | reviews                     | Hodnocení sportovišť                 |
-| audit-service       | 4005 | audit_logs                  | Záznamy o důležitých akcích          |
+| Mikroslužba         | Port | Spravovaná data             | Odpovědnost                                      |
+| ------------------- | ---- | --------------------------- | ------------------------------------------------ |
+| auth-service        | 4001 | users, manager_requests      | Uživatelé a jejich role a žádosti o roli správce |
+| venue-service       | 4002 | venues, courts, price_rules | Sportoviště, kurty a cenová pravidla             |
+| reservation-service | 4003 | reservations                | Rezervace                                        |
+| review-service      | 4004 | reviews                     | Hodnocení sportovišť                             |
+| audit-service       | 4005 | audit_logs                  | Záznamy o důležitých akcích                      |
 
 Rozdělení dat vychází z datového modelu projektu. Tabulka vyjadřuje logické vlastnictví dat jednotlivými službami, nikoli nutně jejich fyzické oddělení v databázi.
 

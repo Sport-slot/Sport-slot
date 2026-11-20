@@ -275,3 +275,83 @@ Endpointy zajišťuje `reservation-service`.
   * Už zrušená rezervace se nemění a vrátí se její aktuální stav (opakované volání je bezpečné).
   * Zrušení a záznam do audit logu (`reservation/cancel`) se uloží v jednom zápisu.
 * **Chyby:** `reservation/cancel/invalidDtoIn` (400), `reservation/cancel/cancellationTooLate` (400, `paramMap`: `startAt, cancellableUntil`), `reservation/cancel/notAuthenticated` (401), `reservation/cancel/notAuthorized` (403, cizí rezervace), `reservation/cancel/reservationDoesNotExist` (404), varování `reservation/cancel/unsupportedKeys`.
+
+
+## 7. Žádosti o roli správce (ManagerRequest)
+
+Zajišťuje `auth-service`. Hráč požádá o roli správce a administrátor žádost schválí nebo zamítne. Všechny endpointy vyžadují JWT. Role se kontrolují v `auth-service` podle databáze.
+
+### POST /api/managerRequest/create
+
+**Popis:** Hráč požádá o roli správce. Vznikne žádost ve stavu `PENDING`.
+
+**Práva:** Přihlášený uživatel, který ještě není správce ani administrátor.
+
+**dtoIn:**
+```json
+{ "message": "Chci spravovat kurty" }
+```
+`message` je nepovinné, nejvýše 1000 znaků.
+
+**dtoOut (200):**
+```json
+{
+  "id": "…",
+  "userId": "…",
+  "message": "Chci spravovat kurty",
+  "status": "PENDING",
+  "decidedById": null,
+  "createdAt": "2026-11-20T15:27:11.542Z",
+  "decidedAt": null,
+  "uuAppErrorMap": {}
+}
+```
+
+**Možné chyby:**
+- 400 – `managerRequest/create/invalidDtoIn`
+- 401 – `managerRequest/create/notAuthenticated`
+- 409 – `managerRequest/create/alreadyManager` (uživatel už je správce nebo administrátor)
+- 409 – `managerRequest/create/managerRequestAlreadyPending` (už má nevyřízenou žádost)
+
+### GET /api/managerRequest/list
+
+**Popis:** Seznam žádostí o roli správce.
+
+**Práva:** Administrátor (role `ADMIN`).
+
+**dtoIn (query):** `status?` – `PENDING`, `APPROVED` nebo `REJECTED`. Bez filtru vrací všechny žádosti.
+
+**dtoOut (200):** `itemList: [{ id, userId, message, status, decidedById, createdAt, decidedAt, user: { id, email, name } }]` seřazené od nejstarší žádosti. Bez stránkování.
+
+**Možné chyby:**
+- 400 – `managerRequest/list/invalidDtoIn`
+- 401 – `managerRequest/list/notAuthenticated`
+- 403 – `managerRequest/list/notAuthorized`
+
+### POST /api/managerRequest/approve
+
+**Popis:** Schválení žádosti. Žádost přejde do stavu `APPROVED` a žadatel dostane roli `MANAGER`. Obojí se provede v jedné transakci.
+
+**Práva:** Administrátor (role `ADMIN`).
+
+**dtoIn:**
+```json
+{ "id": "uuid-žádosti" }
+```
+
+**dtoOut (200):** upravená žádost (stejný tvar jako u `create`), `status` je `APPROVED`, `decidedById` a `decidedAt` jsou vyplněné.
+
+**Možné chyby:**
+- 400 – `managerRequest/approve/invalidDtoIn`
+- 401 – `managerRequest/approve/notAuthenticated`
+- 403 – `managerRequest/approve/notAuthorized`
+- 404 – `managerRequest/approve/managerRequestDoesNotExist`
+- 409 – `managerRequest/approve/managerRequestAlreadyDecided` (žádost už byla vyřízena)
+
+### POST /api/managerRequest/reject
+
+**Popis:** Zamítnutí žádosti. Stav se změní na `REJECTED`, role uživatele se nemění.
+
+**Práva, dtoIn, dtoOut a chyby:** stejné jako u `approve` (v klíčích chyb je `reject`).
+
+**Poznámka:** Role se v `auth-service` čtou z databáze, takže schválený uživatel je správcem hned. JWT ale nese role z okamžiku přihlášení, takže gateway mu pustí endpointy správce (např. `venue/create`) až po novém přihlášení.
