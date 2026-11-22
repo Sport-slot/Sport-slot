@@ -16,6 +16,11 @@ const db = createDb()
 const server = createApp({
 	userDao: createUserDao(db),
 	managerRequestDao: createManagerRequestDao(db),
+	audit: async (event) => {
+		await db.auditLog.create({
+			data: event,
+		})
+	},
 
 	verifyGoogleIdToken: googleClientId ? createGoogleTokenVerifier(googleClientId) : undefined,
 }).listen(port, () => {
