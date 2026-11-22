@@ -9,8 +9,11 @@
 		"test": "node --test"
 	},
 	"dependencies": {
+		"@prisma/adapter-pg": "^7.10.1",
+		"@prisma/client": "^7.10.1",
 		"@sportslot/api-format": "*",
-		"express": "^5.1.0"
+		"express": "^5.1.0",
+		"pg": "^8.23.1"
 	},
 	"devDependencies": {
 		"supertest": "^7.1.0"

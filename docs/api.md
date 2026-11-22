@@ -355,3 +355,14 @@ Zajišťuje `auth-service`. Hráč požádá o roli správce a administrátor ž
 **Práva, dtoIn, dtoOut a chyby:** stejné jako u `approve` (v klíčích chyb je `reject`).
 
 **Poznámka:** Role se v `auth-service` čtou z databáze, takže schválený uživatel je správcem hned. JWT ale nese role z okamžiku přihlášení, takže gateway mu pustí endpointy správce (např. `venue/create`) až po novém přihlášení.
+
+## 8. Audit log (AuditLog)
+
+Zajišťuje `audit-service`. Záznamy o důležitých akcích zapisují přímo služby, které akci provedou, ve stejné transakci jako samotnou změnu. `audit-service` je jen vypisuje.
+
+### `GET audit/list`
+* **Popis:** Výpis záznamů audit logu pro administrátora.
+* **Práva:** Administrátor (role `ADMIN`). Role se berou z hlavičky `x-user-roles` od gateway, takže nově přidělená role se projeví až po novém přihlášení.
+* **dtoIn (query):** `action?` (max. 100 znaků, např. `reservation/create`), `entityType?` (max. 50 znaků, např. `Reservation`), `pageIndex?` (od 0), `pageSize?` (1–100, výchozí 20). Filtry fungují samostatně i společně.
+* **dtoOut:** `itemList: [{ id, userId, action, entityType, entityId, details, createdAt }]` seřazené od nejnovějšího, `pageInfo: { pageIndex, pageSize, total }`. `userId` a `details` mohou být `null`.
+* **Chyby:** `audit/list/invalidDtoIn` (400), `audit/list/notAuthenticated` (401), `audit/list/notAuthorized` (403), varování `audit/list/unsupportedKeys`.
