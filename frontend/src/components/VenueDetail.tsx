@@ -21,6 +21,7 @@ import {
 import { ApiError, type DayOfWeek } from "@/lib/api";
 import { dayNames, daysOfWeek } from "@/lib/venueForm";
 import { isOptimizableImage, stockVenuePhotos, venueImageSrc } from "@/lib/venueImages";
+import { FreeSlots } from "@/components/FreeSlots";
 import { capitalize, imageForSports } from "@/lib/venueVisuals";
 import { getVenue, type Court, type VenueDetail as Venue } from "@/lib/venues";
 import { DeactivatedNotice, VenueManagement } from "@/components/VenueManagement";
@@ -370,6 +371,7 @@ function VenueContent({ venue, backHref, onChange }: {
               </ul>
             </>
           )}
+          {venue.active && venue.courts.length > 0 && <FreeSlots courts={venue.courts} />}
         </section>
 
         <div className={`mt-24 grid gap-14 md:mt-32 ${venue.description ? "lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-24" : ""}`}>
