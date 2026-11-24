@@ -125,5 +125,6 @@ Frontend musí zohlednit načítání a prázdný seznam termínů. Zakázané s
 - [`docs/openapi.yaml`](openapi.yaml) – OpenAPI definice použitých endpointů.
 - [`frontend/README.md`](../frontend/README.md) – Next.js, autentizace a konfigurace API.
 - [`frontend/src/components/VenueDetail.tsx`](../frontend/src/components/VenueDetail.tsx) – existující detail sportoviště; online rezervace je zde dosud označená jako připravovaná.
+- [`frontend/src/components/FreeSlots.tsx`](../frontend/src/components/FreeSlots.tsx) – týdenní kalendář volných termínů s cenami (kurt × 7 dní × hodiny). Výběr intervalu pro rezervaci je vhodné postavit přímo na jeho buňkách volných hodin.
 
 **Poznámka:** Dokument je specifikace zamýšleného frontendového chování. Po dokončení implementace je vhodné ověřit konkrétní komponenty a případné změny UX s implementátorem.

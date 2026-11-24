@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findOverlap, parsePrice, rulesByDay, validatePriceRule, type PriceRule } from "@/lib/priceRules";
+import { findOverlap, parsePrice, priceGaps, rulesByDay, validatePriceRule, type PriceRule } from "@/lib/priceRules";
 
 const rule = (overrides: Partial<PriceRule>): PriceRule => ({
   id: "r1",
@@ -63,5 +63,21 @@ describe("rulesByDay", () => {
     expect(grouped[0].rules.map((item) => item.id)).toEqual(["a", "b"]);
     expect(grouped[5].rules.map((item) => item.id)).toEqual(["c"]);
     expect(grouped[1].rules).toEqual([]);
+  });
+});
+
+describe("priceGaps", () => {
+  it("finds opening hours not covered by any rule", () => {
+    const rules = [rule({ id: "a", startTime: "10:00", endTime: "16:00" }), rule({ id: "b", startTime: "18:00", endTime: "20:00" })];
+    expect(priceGaps("08:00", "22:00", rules)).toEqual([
+      { startTime: "08:00", endTime: "10:00" },
+      { startTime: "16:00", endTime: "18:00" },
+      { startTime: "20:00", endTime: "22:00" },
+    ]);
+  });
+
+  it("returns nothing when rules cover the whole day and the whole day when there are none", () => {
+    expect(priceGaps("07:00", "16:00", [rule({})])).toEqual([]);
+    expect(priceGaps("08:00", "20:00", [])).toEqual([{ startTime: "08:00", endTime: "20:00" }]);
   });
 });

@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as PriceRules from "@/lib/priceRules";
@@ -41,11 +41,11 @@ describe("CourtPricing", () => {
     api.listPriceRules.mockResolvedValue([{ id: "r1", courtId: "c1", dayOfWeek: 1, startTime: "07:00", endTime: "16:00", pricePerHour: 300 }]);
     render(<CourtPricing venueId="v1" courtId="c1" />);
 
-    expect(await screen.findByRole("heading", { name: "Ceník: Kurt 1" })).toBeTruthy();
-    const list = screen.getByRole("complementary");
-    expect(within(list).getByText("07:00–16:00")).toBeTruthy();
-    expect(list.textContent).toContain("300");
-    expect(screen.getByRole("textbox", { name: "Cena za hodinu" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Ceník kurtu" })).toBeTruthy();
+    const calendar = screen.getByRole("region", { name: "Týdenní ceník Kurt 1" });
+    expect(within(calendar).getByText("07:00–16:00")).toBeTruthy();
+    expect(calendar.textContent).toContain("300");
+    expect(screen.queryByText(/Překrývá se/)).toBeNull();
   });
 
   it("creates one rule per selected day", async () => {
@@ -62,7 +62,7 @@ describe("CourtPricing", () => {
     expect(await screen.findByText(/Uloženo: So, Ne 07:00–22:00/)).toBeTruthy();
     expect(api.createPriceRule).toHaveBeenCalledTimes(2);
     expect(api.createPriceRule).toHaveBeenCalledWith({ courtId: "c1", dayOfWeek: 6, startTime: "07:00", endTime: "22:00", pricePerHour: 450 });
-    expect(screen.getAllByText("Nové")).toHaveLength(2);
+    expect((screen.getByRole("textbox", { name: "Cena za hodinu" }) as HTMLInputElement).value).toBe("450");
   });
 
   it("blocks a rule overlapping the existing price list", async () => {
@@ -71,11 +71,30 @@ describe("CourtPricing", () => {
     const user = userEvent.setup();
     render(<CourtPricing venueId="v1" courtId="c1" />);
 
-    await user.type(await screen.findByRole("textbox", { name: "Cena za hodinu" }), "500");
+    expect((await screen.findByRole("checkbox", { name: "Pondělí" }) as HTMLInputElement).checked).toBe(true);
+    await user.clear(screen.getByLabelText("Od"));
+    await user.type(screen.getByLabelText("Od"), "10:00");
+    await user.type(screen.getByRole("textbox", { name: "Cena za hodinu" }), "500");
     await user.click(screen.getByRole("button", { name: "Přidat do ceníku" }));
 
-    expect(screen.getByText(/Překrývá se s pravidlem Po 07:00–16:00/)).toBeTruthy();
+    expect(screen.getByText(/Překrývá se s Po 07:00–16:00/)).toBeTruthy();
     expect(api.createPriceRule).not.toHaveBeenCalled();
+  });
+
+  it("prefills the form from a gap without a price", async () => {
+    api.getVenue.mockResolvedValue(venue({ openingHours: [{ dayOfWeek: 1, openTime: "07:00", closeTime: "22:00" }, { dayOfWeek: 3, openTime: "08:00", closeTime: "20:00" }] }));
+    api.listPriceRules.mockResolvedValue([{ id: "r1", courtId: "c1", dayOfWeek: 1, startTime: "07:00", endTime: "16:00", pricePerHour: 300 }]);
+    const user = userEvent.setup();
+    render(<CourtPricing venueId="v1" courtId="c1" />);
+
+    await user.click(await screen.findByRole("button", { name: "Středa 08:00–20:00 bez ceny, nastavit cenu" }));
+
+    expect((screen.getByRole("checkbox", { name: "Středa" }) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole("checkbox", { name: "Pondělí" }) as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByLabelText("Od") as HTMLInputElement).value).toBe("08:00");
+    expect((screen.getByLabelText("Do") as HTMLInputElement).value).toBe("20:00");
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Cena za hodinu" })));
+    expect(screen.getByText("2 úseky bez ceny")).toBeTruthy();
   });
 
   it("shows the server error when saving fails", async () => {

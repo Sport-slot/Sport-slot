@@ -66,6 +66,27 @@ describe('booking flow through gateway, services and Postgres', { skip: !databas
 		assert.equal(detail.body.name, venueName)
 	})
 
+	it('lets the owner update the venue and logs the change', async () => {
+		const updated = await stack.call('POST', '/venue/update', {
+			token: manager.token,
+			body: { id: venueId, description: 'Updated by e2e', openingHoursList },
+		})
+		assert.equal(updated.status, 200)
+		assert.equal(updated.body.description, 'Updated by e2e')
+		assert.equal(updated.body.openingHoursList.length, openingHoursList.length)
+
+		const forbidden = await stack.call('POST', '/venue/update', { token: player.token, body: { id: venueId, name: 'Hijacked' } })
+		assert.equal(forbidden.status, 403)
+
+		const detail = await stack.call('GET', '/venue/get', { query: { id: venueId } })
+		assert.equal(detail.body.description, 'Updated by e2e')
+		assert.equal(detail.body.name, venueName)
+
+		const audit = await stack.db.auditLog.findMany({ where: { entityId: venueId, action: 'venue/update' }, select: { details: true } })
+		assert.equal(audit.length, 1)
+		assert.deepEqual(audit[0].details.changedKeys, ['description', 'openingHoursList'])
+	})
+
 	it('lets the manager add a court and a price rule', async () => {
 		const court = await stack.call('POST', '/court/create', {
 			token: manager.token,

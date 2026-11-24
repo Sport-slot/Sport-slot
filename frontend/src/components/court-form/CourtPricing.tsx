@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowClockwise, CaretRight, CheckCircle, CircleNotch, CurrencyCircleDollar, MapPin, Plus, WarningCircle } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowLeft, CaretRight, CheckCircle, CircleNotch, MapPin, Plus, WarningCircle } from "@phosphor-icons/react";
 import { ErrorBanner, FieldError, inputClass, labelClass } from "@/components/form/fields";
 import { ApiError, type DayOfWeek } from "@/lib/api";
 import {
@@ -11,13 +11,16 @@ import {
   formatPrice,
   listPriceRules,
   parsePrice,
-  rulesByDay,
+  priceGaps,
+  sortPriceRules,
+  toMinutes,
   validatePriceRule,
   type PriceRule,
   type PriceRuleFormValues,
 } from "@/lib/priceRules";
 import { dayNames, daysOfWeek } from "@/lib/venueForm";
 import { getVenue, type Court, type VenueDetail } from "@/lib/venues";
+import { hourRange } from "@/lib/courts";
 
 type LoadState =
   | { status: "loading" }
@@ -129,28 +132,56 @@ export function CourtPricing({ venueId, courtId }: { venueId: string; courtId: s
   );
 }
 
+function firstGap(venue: VenueDetail, rules: PriceRule[]): { day: DayOfWeek; startTime: string; endTime: string } | null {
+  for (const hours of [...venue.openingHours].sort((a, b) => a.dayOfWeek - b.dayOfWeek)) {
+    const gap = priceGaps(hours.openTime, hours.closeTime, rules.filter((rule) => rule.dayOfWeek === hours.dayOfWeek))[0];
+    if (gap) return { day: hours.dayOfWeek, ...gap };
+  }
+  return null;
+}
+
+function initialValues(venue: VenueDetail, rules: PriceRule[]): PriceRuleFormValues {
+  if (rules.length === 0) return { days: [...weekdays], ...defaultHours(venue), price: "" };
+  const gap = firstGap(venue, rules);
+  return gap ? { days: [gap.day], startTime: gap.startTime, endTime: gap.endTime, price: "" } : { days: [], ...defaultHours(venue), price: "" };
+}
+
 function PricingEditor({ venue, court, initialRules }: { venue: VenueDetail; court: Court; initialRules: PriceRule[] }) {
   const [rules, setRules] = useState<PriceRule[]>(initialRules);
-  const [values, setValues] = useState<PriceRuleFormValues>(() => ({ days: [...weekdays], ...defaultHours(venue), price: "" }));
+  const [values, setValues] = useState<PriceRuleFormValues>(() => initialValues(venue, initialRules));
+  const [touched, setTouched] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [addedIds, setAddedIds] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
+  const priceRef = useRef<HTMLInputElement>(null);
   const errors = showErrors ? validatePriceRule(values) : {};
-  const overlaps = errors.time ? [] : values.days.flatMap((day) => {
+  const timeValid = !validatePriceRule({ ...values, days: [1], price: "0" }).time;
+  const overlaps = (touched || showErrors) && timeValid ? values.days.flatMap((day) => {
     const rule = findOverlap(rules, day, values.startTime, values.endTime);
     return rule ? [rule] : [];
-  });
+  }) : [];
+  const gapCount = venue.openingHours.reduce((count, hours) => count + priceGaps(hours.openTime, hours.closeTime, rules.filter((rule) => rule.dayOfWeek === hours.dayOfWeek)).length, 0);
 
   function update(patch: Partial<PriceRuleFormValues>) {
     setValues((current) => ({ ...current, ...patch }));
+    setTouched(true);
     setSubmitError(null);
   }
 
   function toggleDay(day: DayOfWeek) {
     update({ days: values.days.includes(day) ? values.days.filter((item) => item !== day) : [...values.days, day].sort() });
+  }
+
+  function pickGap(day: DayOfWeek, startTime: string, endTime: string) {
+    update({ days: [day], startTime, endTime });
+    setAnnouncement("");
+    requestAnimationFrame(() => {
+      priceRef.current?.focus({ preventScroll: true });
+      formRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+    });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -164,7 +195,8 @@ function PricingEditor({ venue, court, initialRules }: { venue: VenueDetail; cou
       requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
       return;
     }
-    if (overlaps.length > 0) return;
+    const blocking = values.days.some((day) => findOverlap(rules, day, values.startTime, values.endTime));
+    if (blocking) return;
     const pricePerHour = parsePrice(values.price) ?? 0;
     setSubmitting(true);
     const created: PriceRule[] = [];
@@ -172,14 +204,17 @@ function PricingEditor({ venue, court, initialRules }: { venue: VenueDetail; cou
       for (const dayOfWeek of values.days) {
         created.push(await createPriceRule({ courtId: court.id, dayOfWeek, startTime: values.startTime, endTime: values.endTime, pricePerHour }));
       }
+      const nextRules = [...rules, ...created];
       setShowErrors(false);
+      setTouched(false);
       setAnnouncement(`Uloženo: ${values.days.map((day) => shortDayNames[day]).join(", ")} ${values.startTime}–${values.endTime} za ${formatPrice(pricePerHour)} / hod.`);
-      update({ price: "" });
+      const gap = firstGap(venue, nextRules);
+      setValues(gap ? { days: [gap.day], startTime: gap.startTime, endTime: gap.endTime, price: values.price } : { ...values, days: [] });
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Pravidlo se nepodařilo uložit. Zkontrolujte připojení a zkuste to znovu.";
       const savedDays = created.map((rule) => shortDayNames[rule.dayOfWeek]).join(", ");
       setSubmitError(savedDays ? `${message} Pro ${savedDays} se pravidlo uložilo, ostatní dny zůstaly beze změny.` : message);
-      if (created.length > 0) update({ days: values.days.filter((day) => !created.some((rule) => rule.dayOfWeek === day)) });
+      if (created.length > 0) setValues((current) => ({ ...current, days: current.days.filter((day) => !created.some((rule) => rule.dayOfWeek === day)) }));
     } finally {
       if (created.length > 0) {
         setRules((current) => [...current, ...created]);
@@ -191,125 +226,221 @@ function PricingEditor({ venue, court, initialRules }: { venue: VenueDetail; cou
 
   return (
     <>
-      <h1 className="mt-4 font-display text-[clamp(2rem,4.5vw,3.25rem)] leading-[1.08] font-semibold tracking-[-.045em]">
-        Ceník: {court.name}
-      </h1>
-      <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted md:text-lg">
-        Nastavte cenu za hodinu pro jednotlivé dny a časy. Rezervace se počítá podle ceníku platného v době rezervace, takže změna nemění cenu už vytvořených rezervací.
-      </p>
+      <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-[clamp(2rem,4.5vw,3.25rem)] leading-[1.08] font-semibold tracking-[-.045em]">Ceník kurtu</h1>
+          <p className="mt-2 text-base text-muted md:text-lg">{venue.name}</p>
+        </div>
+        <p className="text-sm text-muted">
+          {rules.length === 0 ? "Zatím bez ceníku" : gapCount === 0 ? "Celá otevírací doba má cenu" : `${gapCount} ${gapCount === 1 ? "úsek" : gapCount <= 4 ? "úseky" : "úseků"} bez ceny`}
+        </p>
+      </div>
 
-      <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-12">
-        <form ref={formRef} onSubmit={handleSubmit} noValidate aria-busy={submitting} className="min-w-0">
-          <p role="status" className={announcement ? "mb-6 flex items-center gap-2 rounded-xl bg-brand-50 px-4 py-3 text-sm font-medium text-brand-900 dark:bg-brand-900/40 dark:text-brand-100" : "sr-only"}>
-            {announcement && <CheckCircle size={19} weight="fill" className="shrink-0 text-brand-500" aria-hidden="true" />}
-            {announcement}
-          </p>
+      {venue.courts.length > 1 && (
+        <nav aria-label="Kurty sportoviště" className="-mx-5 mt-6 flex gap-2 overflow-x-auto px-5 pb-1 md:mx-0 md:flex-wrap md:px-0">
+          {venue.courts.map((item) => {
+            const current = item.id === court.id;
+            return (
+              <Link key={item.id} href={`/venues/${venue.id}/courts/${item.id}/prices`} aria-current={current ? "page" : undefined} className={`inline-flex min-h-10 shrink-0 items-center rounded-full border px-4 text-sm font-medium whitespace-nowrap transition-colors ${current ? "border-foreground bg-foreground text-page" : "border-line hover:border-muted"}`}>
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+      )}
 
-          <fieldset disabled={submitting} className="grid min-w-0 gap-8">
-            <legend className="sr-only">Nové cenové pravidlo</legend>
+      <div className="mt-8 grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-12">
+        <section aria-labelledby="price-calendar-title" className="min-w-0">
+          <h2 id="price-calendar-title" className="sr-only">Týdenní ceník {court.name}</h2>
+          <PriceCalendar venue={venue} rules={rules} addedIds={addedIds} selected={values} onPickGap={pickGap} />
+        </section>
 
-            <fieldset aria-describedby={errors.days ? "price-days-error" : undefined}>
-              <legend className={labelClass}>Dny</legend>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {[{ label: "Pracovní dny", days: weekdays }, { label: "Víkend", days: weekend }, { label: "Celý týden", days: daysOfWeek }].map((preset) => (
-                  <button key={preset.label} type="button" aria-pressed={sameDays(values.days, preset.days)} onClick={() => update({ days: [...preset.days] })} className={`min-h-11 rounded-full border px-4 text-sm font-medium transition-colors ${sameDays(values.days, preset.days) ? "border-foreground bg-foreground text-page" : "border-line hover:bg-surface"}`}>
-                    {preset.label}
-                  </button>
-                ))}
+        <aside className="lg:sticky lg:top-28">
+          <form ref={formRef} onSubmit={handleSubmit} noValidate aria-busy={submitting} aria-labelledby="price-form-title" className="scroll-mt-28 rounded-2xl border border-line bg-surface/40 p-5">
+            <h2 id="price-form-title" className="font-display text-lg font-semibold">Přidat cenu</h2>
+            <p className="mt-1 text-sm text-muted">Nebo klikněte v kalendáři na úsek bez ceny.</p>
+
+            <p role="status" className={announcement ? "mt-4 flex items-start gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-sm text-brand-900 dark:bg-brand-900/40 dark:text-brand-100" : "sr-only"}>
+              {announcement && <CheckCircle size={18} weight="fill" className="mt-px shrink-0 text-brand-500" aria-hidden="true" />}
+              {announcement}
+            </p>
+
+            <fieldset disabled={submitting} className="mt-5 grid min-w-0 gap-6">
+              <legend className="sr-only">Nové cenové pravidlo</legend>
+
+              <fieldset aria-describedby={errors.days ? "price-days-error" : undefined}>
+                <legend className={labelClass}>Dny</legend>
+                <div className="mt-2.5 grid grid-cols-7 gap-1">
+                  {daysOfWeek.map((day) => {
+                    const checked = values.days.includes(day);
+                    return (
+                      <label key={day} className={`flex min-h-10 cursor-pointer items-center justify-center rounded-lg border text-sm font-semibold transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-foreground ${checked ? "border-foreground bg-foreground text-page" : "border-line text-muted hover:border-muted hover:text-foreground"}`}>
+                        <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleDay(day)} aria-label={dayNames[day]} />
+                        <span aria-hidden="true">{shortDayNames[day]}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-3 text-sm">
+                  {[{ label: "Pracovní dny", days: weekdays }, { label: "Víkend", days: weekend }, { label: "Celý týden", days: daysOfWeek }].map((preset) => (
+                    <button key={preset.label} type="button" aria-pressed={sameDays(values.days, preset.days)} onClick={() => update({ days: [...preset.days] })} className={`inline-flex min-h-9 items-center underline-offset-4 hover:underline ${sameDays(values.days, preset.days) ? "font-semibold text-foreground" : "text-muted"}`}>
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+                <FieldError id="price-days-error">{errors.days}</FieldError>
+              </fieldset>
+
+              <div className="grid gap-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <label htmlFor="price-start" className={labelClass}>Od</label>
+                    <input id="price-start" type="time" step={900} className={inputClass} value={values.startTime} aria-invalid={Boolean(errors.time) || overlaps.length > 0} aria-describedby="price-time-error" onChange={(event) => update({ startTime: event.target.value })} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <label htmlFor="price-end" className={labelClass}>Do</label>
+                    <input id="price-end" type="time" step={900} className={inputClass} value={values.endTime} aria-invalid={Boolean(errors.time) || overlaps.length > 0} aria-describedby="price-time-error" onChange={(event) => update({ endTime: event.target.value })} />
+                  </div>
+                </div>
+                <FieldError id="price-time-error">
+                  {errors.time ?? (overlaps.length > 0
+                    ? `Překrývá se s ${overlaps.map((rule) => `${shortDayNames[rule.dayOfWeek]} ${rule.startTime}–${rule.endTime}`).join(", ")}. Navazující časy jsou v pořádku.`
+                    : undefined)}
+                </FieldError>
               </div>
-              <div className="mt-3 grid grid-cols-7 gap-1.5 sm:max-w-md">
-                {daysOfWeek.map((day) => {
-                  const checked = values.days.includes(day);
+
+              <div className="grid gap-1.5">
+                <label htmlFor="price-amount" className={labelClass}>Cena za hodinu</label>
+                <div className="relative">
+                  <input ref={priceRef} id="price-amount" type="text" inputMode="decimal" autoComplete="off" placeholder="např. 400" className={`${inputClass} pr-12 text-lg font-semibold tabular-nums`} value={values.price} aria-invalid={Boolean(errors.price)} aria-describedby={errors.price ? "price-amount-error" : undefined} onChange={(event) => update({ price: event.target.value })} />
+                  <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-muted">Kč</span>
+                </div>
+                <FieldError id="price-amount-error">{errors.price}</FieldError>
+              </div>
+            </fieldset>
+
+            {submitError && (
+              <div className="mt-5">
+                <ErrorBanner title="Pravidlo se nepodařilo uložit">{submitError}</ErrorBanner>
+              </div>
+            )}
+
+            <button type="submit" disabled={submitting} className="button button-primary mt-6 w-full gap-2 disabled:cursor-wait disabled:opacity-70">
+              {submitting ? <><CircleNotch size={18} className="animate-spin" aria-hidden="true" /><span role="status">Ukládáme…</span></> : <><Plus size={18} aria-hidden="true" /> Přidat do ceníku</>}
+            </button>
+            <p className="mt-3 text-xs leading-relaxed text-muted">Změna ceníku neovlivní cenu už vytvořených rezervací.</p>
+          </form>
+
+          <Link href={`/venues/${venue.id}`} className="mt-4 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-muted hover:text-foreground">
+            <ArrowLeft size={16} aria-hidden="true" /> Zpět na sportoviště
+          </Link>
+        </aside>
+      </div>
+    </>
+  );
+}
+
+const hourHeight = 44;
+
+function PriceCalendar({
+  venue,
+  rules,
+  addedIds,
+  selected,
+  onPickGap,
+}: {
+  venue: VenueDetail;
+  rules: PriceRule[];
+  addedIds: string[];
+  selected: PriceRuleFormValues;
+  onPickGap: (day: DayOfWeek, startTime: string, endTime: string) => void;
+}) {
+  const hours = hourRange([
+    ...venue.openingHours.map((item) => ({ start: item.openTime, end: item.closeTime })),
+    ...rules.map((rule) => ({ start: rule.startTime, end: rule.endTime })),
+  ]);
+  const from = (hours[0] ?? 8) * 60;
+  const prices = rules.map((rule) => rule.pricePerHour);
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const tier = (price: number) => (max === min ? 1 : Math.min(2, Math.floor(((price - min) / (max - min)) * 3)));
+  const tierClass = [
+    "bg-brand-50 text-brand-900 dark:bg-ball/10 dark:text-foreground",
+    "bg-brand-100 text-brand-900 dark:bg-ball/20 dark:text-foreground",
+    "bg-brand-200 text-brand-900 dark:bg-ball/35 dark:text-foreground",
+  ];
+  const top = (time: string) => ((toMinutes(time) - from) / 60) * hourHeight;
+  const height = (start: string, end: string) => ((toMinutes(end) - toMinutes(start)) / 60) * hourHeight;
+
+  return (
+    <>
+      <div className="-mx-5 overflow-x-auto px-5 pb-2 md:mx-0 md:px-0">
+        <div className="grid min-w-[640px] grid-cols-[3rem_repeat(7,minmax(0,1fr))] gap-x-1.5">
+          <div />
+          {daysOfWeek.map((day) => (
+            <div key={day} className="pb-3 text-center">
+              <span className="text-sm font-semibold">{shortDayNames[day]}</span>
+              <span className="sr-only"> {dayNames[day]}</span>
+            </div>
+          ))}
+
+          <div className="relative" style={{ height: hours.length * hourHeight }}>
+            {hours.map((hour, index) => (
+              <span key={hour} className="absolute right-2 -translate-y-1/2 text-xs text-muted tabular-nums" style={{ top: index * hourHeight }}>
+                {String(hour).padStart(2, "0")}:00
+              </span>
+            ))}
+          </div>
+
+          {daysOfWeek.map((day) => {
+            const opening = venue.openingHours.find((item) => item.dayOfWeek === day);
+            const dayRules = sortPriceRules(rules.filter((rule) => rule.dayOfWeek === day));
+            const gaps = opening ? priceGaps(opening.openTime, opening.closeTime, dayRules) : [];
+            return (
+              <div key={day} className="relative rounded-xl bg-[repeating-linear-gradient(135deg,var(--color-surface)_0_6px,transparent_6px_12px)]" style={{ height: hours.length * hourHeight }}>
+                {opening ? (
+                  <div aria-hidden="true" className="absolute inset-x-0 rounded-xl bg-page" style={{ top: top(opening.openTime), height: height(opening.openTime, opening.closeTime) }} />
+                ) : (
+                  <span className="absolute inset-x-0 top-3 text-center text-xs text-muted">Zavřeno</span>
+                )}
+                {hours.slice(1).map((hour, index) => (
+                  <div key={hour} aria-hidden="true" className="absolute inset-x-0 border-t border-line/50" style={{ top: (index + 1) * hourHeight }} />
+                ))}
+                {dayRules.map((rule) => {
+                  const blockHeight = height(rule.startTime, rule.endTime);
                   return (
-                    <label key={day} className={`flex min-h-11 cursor-pointer items-center justify-center rounded-xl border-2 text-sm font-semibold transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-foreground ${checked ? "border-brand-500 bg-brand-50/60 dark:bg-brand-900/25" : "border-line text-muted hover:bg-surface/60"}`}>
-                      <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleDay(day)} aria-label={dayNames[day]} />
-                      <span aria-hidden="true">{shortDayNames[day]}</span>
-                    </label>
+                    <div key={rule.id} className={`absolute inset-x-0.5 flex flex-col justify-start overflow-hidden rounded-lg px-2 pt-1.5 ${tierClass[tier(rule.pricePerHour)]} ${addedIds.includes(rule.id) ? "ring-2 ring-brand-500 dark:ring-ball" : ""}`} style={{ top: top(rule.startTime) + 2, height: blockHeight - 4 }}>
+                      <span className="text-sm font-semibold tabular-nums">{formatPrice(rule.pricePerHour)}</span>
+                      {blockHeight >= 2 * hourHeight - 4 && <span className="text-xs tabular-nums opacity-70">{rule.startTime}–{rule.endTime}</span>}
+                      <span className="sr-only">{dayNames[day]} {rule.startTime}–{rule.endTime}</span>
+                    </div>
+                  );
+                })}
+                {gaps.map((gap) => {
+                  const active = selected.days.length === 1 && selected.days[0] === day && selected.startTime === gap.startTime && selected.endTime === gap.endTime;
+                  return (
+                    <button
+                      key={gap.startTime}
+                      type="button"
+                      onClick={() => onPickGap(day, gap.startTime, gap.endTime)}
+                      aria-label={`${dayNames[day]} ${gap.startTime}–${gap.endTime} bez ceny, nastavit cenu`}
+                      className={`absolute inset-x-0.5 flex items-center justify-center overflow-hidden rounded-lg border border-dashed text-xs font-medium transition-colors ${active ? "border-foreground bg-surface text-foreground" : "border-amber-500/60 text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40"}`}
+                      style={{ top: top(gap.startTime) + 2, height: height(gap.startTime, gap.endTime) - 4 }}
+                    >
+                      <Plus size={13} aria-hidden="true" className="mr-1 shrink-0" /> Bez ceny
+                    </button>
                   );
                 })}
               </div>
-              <div className="mt-2"><FieldError id="price-days-error">{errors.days}</FieldError></div>
-            </fieldset>
-
-            <div className="grid gap-2">
-              <div className="grid max-w-md grid-cols-2 gap-3">
-                <div className="grid gap-2">
-                  <label htmlFor="price-start" className={labelClass}>Od</label>
-                  <input id="price-start" type="time" step={900} className={inputClass} value={values.startTime} aria-invalid={Boolean(errors.time) || overlaps.length > 0} aria-describedby="price-time-error" onChange={(event) => update({ startTime: event.target.value })} />
-                </div>
-                <div className="grid gap-2">
-                  <label htmlFor="price-end" className={labelClass}>Do</label>
-                  <input id="price-end" type="time" step={900} className={inputClass} value={values.endTime} aria-invalid={Boolean(errors.time) || overlaps.length > 0} aria-describedby="price-time-error" onChange={(event) => update({ endTime: event.target.value })} />
-                </div>
-              </div>
-              <FieldError id="price-time-error">
-                {errors.time ?? (overlaps.length > 0
-                  ? `Překrývá se s pravidlem ${overlaps.map((rule) => `${shortDayNames[rule.dayOfWeek]} ${rule.startTime}–${rule.endTime}`).join(", ")}. Navazující časy (např. do 16:00 a od 16:00) jsou v pořádku.`
-                  : undefined)}
-              </FieldError>
-            </div>
-
-            <div className="grid max-w-xs gap-2">
-              <label htmlFor="price-amount" className={labelClass}>Cena za hodinu</label>
-              <div className="relative">
-                <input id="price-amount" type="text" inputMode="decimal" autoComplete="off" placeholder="např. 400" className={`${inputClass} pr-12`} value={values.price} aria-invalid={Boolean(errors.price)} aria-describedby={errors.price ? "price-amount-error" : undefined} onChange={(event) => update({ price: event.target.value })} />
-                <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-muted">Kč</span>
-              </div>
-              <FieldError id="price-amount-error">{errors.price}</FieldError>
-            </div>
-          </fieldset>
-
-          {submitError && (
-            <div className="mt-6">
-              <ErrorBanner title="Pravidlo se nepodařilo uložit">{submitError}</ErrorBanner>
-            </div>
-          )}
-
-          <div className="mt-10 flex flex-col-reverse gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <Link href={`/venues/${venue.id}`} className="inline-flex min-h-12 items-center justify-center rounded-full px-2 text-sm font-semibold text-muted hover:text-foreground">
-              Zpět na sportoviště
-            </Link>
-            <button type="submit" disabled={submitting} className="button button-primary gap-2 disabled:cursor-wait disabled:opacity-70">
-              {submitting ? <><CircleNotch size={18} className="animate-spin" aria-hidden="true" /><span role="status">Ukládáme…</span></> : <><Plus size={18} aria-hidden="true" /> Přidat do ceníku</>}
-            </button>
-          </div>
-        </form>
-
-        <aside className="border-t border-line pt-6 lg:sticky lg:top-28 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8" aria-labelledby="price-list-title">
-          <h2 id="price-list-title" className="font-display text-lg font-semibold">Aktuální ceník</h2>
-          {rules.length === 0 ? (
-            <div className="mt-3 flex items-start gap-3 text-sm leading-relaxed text-muted">
-              <CurrencyCircleDollar size={22} className="shrink-0" aria-hidden="true" />
-              <p>Zatím žádná pravidla. Hráč si může rezervovat jen čas, pro který je v ceníku nastavená cena.</p>
-            </div>
-          ) : (
-            <dl className="mt-3 divide-y divide-line">
-              {rulesByDay(rules).map(({ dayOfWeek, rules: dayRules }) => (
-                <div key={dayOfWeek} className="grid grid-cols-[6rem_minmax(0,1fr)] gap-3 py-3 text-sm">
-                  <dt className="font-semibold text-foreground">{dayNames[dayOfWeek]}</dt>
-                  <dd>
-                    {dayRules.length === 0 ? (
-                      <span className="text-muted">Bez ceny, nelze rezervovat</span>
-                    ) : (
-                      <ul className="grid gap-1">
-                        {dayRules.map((rule) => (
-                          <li key={rule.id} className="flex justify-between gap-3 tabular-nums">
-                            <span className="flex items-center gap-2">
-                              {rule.startTime}–{rule.endTime}
-                              {addedIds.includes(rule.id) && <span className="rounded-full bg-ball px-2 py-0.5 text-[11px] font-semibold text-brand-900">Nové</span>}
-                            </span>
-                            <span className="font-medium text-foreground">{formatPrice(rule.pricePerHour)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          )}
-        </aside>
+            );
+          })}
+        </div>
       </div>
+      <ul aria-label="Legenda" className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted">
+        {prices.length > 0 && <li className="flex items-center gap-2"><span aria-hidden="true" className="flex"><span className="size-3 rounded-l-[4px] bg-brand-50 dark:bg-ball/10" /><span className="size-3 bg-brand-100 dark:bg-ball/20" /><span className="size-3 rounded-r-[4px] bg-brand-200 dark:bg-ball/35" /></span>Od nejlevnější po nejdražší hodinu</li>}
+        <li className="flex items-center gap-2"><span aria-hidden="true" className="size-3 rounded-[4px] border border-dashed border-amber-500/70" />Otevřeno, ale bez ceny. Tento čas si nikdo nezarezervuje.</li>
+        <li className="flex items-center gap-2"><span aria-hidden="true" className="size-3 rounded-[4px] bg-[repeating-linear-gradient(135deg,var(--color-surface)_0_3px,transparent_3px_6px)] ring-1 ring-line" />Zavřeno</li>
+      </ul>
     </>
   );
 }

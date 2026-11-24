@@ -102,6 +102,14 @@ Když `response.ok` je `false`, zobrazte `message` první položky v `uuAppError
 * **Poznámka:** Deaktivované sportoviště se nevrací ve `venue/list`; kurty, hodnocení a rezervace zůstávají. Opakované volání se stejnou hodnotou nic nemění. `reservation/create` (S2) musí deaktivované sportoviště odmítnout.
 * **Chyby:** `venue/setActive/invalidDtoIn` (400), `notAuthenticated` (401), `notAuthorized` (403 – není vlastník), `venue/setActive/venueDoesNotExist` (404), varování `venue/setActive/unsupportedKeys`.
 
+### `POST venue/update`
+* **Popis:** Úprava sportoviště (BUC Správce upraví sportoviště). Posílají se jen měněné údaje.
+* **Práva:** Správce (role `PLAYER` + `MANAGER`), který sportoviště založil.
+* **dtoIn (JSON):** `id` (UUID) a alespoň jedno z: `name`, `address`, `city` (stejné limity jako u `venue/create`), `description` (řetězec do 2000 znaků; `""` nebo `null` popis smaže), `imageUrl` (nahraná fotka nebo fotka z galerie; `null` fotku odebere), `openingHoursList` (celá nová otevírací doba, 1–7 dní, nahradí stávající).
+* **dtoOut:** `id, managerId, name, address, city, description, imageUrl, createdAt, active, deactivatedAt, openingHoursList`.
+* **Pravidla:** Úprava a záznam do audit logu (`venue/update`, `details.changedKeys`) se uloží v jednom zápisu. Jméno + adresa + město musí zůstat unikátní. Změna otevírací doby nemění existující rezervace, platí pro nové. Upravit jde i deaktivované sportoviště.
+* **Chyby:** `venue/update/invalidDtoIn` (400, i když chybí všechny měněné údaje nebo fotka patří jinému uživateli), `notAuthenticated` (401), `notAuthorized` (403 – není vlastník nebo chybí role), `venue/update/venueDoesNotExist` (404), `venue/update/venueAlreadyExists` (409), varování `venue/update/unsupportedKeys`.
+
 ### `GET venue/listMine`
 * **Popis:** Přehled „Moje sportoviště“ (BUC Správce zobrazí svá sportoviště).
 * **Práva:** Správce (role `PLAYER` + `MANAGER`); vrací jen sportoviště přihlášeného správce.
@@ -330,7 +338,7 @@ Zajišťuje `auth-service`. Hráč požádá o roli správce a administrátor ž
 
 ### POST /api/managerRequest/approve
 
-**Popis:** Schválení žádosti. Žádost přejde do stavu `APPROVED` a žadatel dostane roli `MANAGER`. Obojí se provede v jedné transakci.
+**Popis:** Schválení žádosti. Žádost přejde do stavu `APPROVED`, žadatel dostane roli `MANAGER` a do audit logu se zapíše `managerRequest/approve` (`entityType: ManagerRequest`, `details.targetUserId`). Vše se provede v jedné transakci.
 
 **Práva:** Administrátor (role `ADMIN`).
 

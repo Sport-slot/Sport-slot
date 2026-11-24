@@ -3,11 +3,11 @@ import { AppError, invalidDtoIn, unsupportedKeys } from "@sportslot/api-format";
 import { managerIdFromGateway } from "../gatewayAuth.js";
 import { VENUE_IMAGE_URL_PATTERN } from "./venueImage.js";
 
-const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
-const TEXT_LIMITS = { name: 100, address: 200, city: 100 };
-const DESCRIPTION_LIMIT = 2000;
-const IMAGE_URL_LIMIT = 500;
-const BUNDLED_IMAGE_PATTERN = /^\/images\/venues\/[a-z0-9-]+\.(webp|jpg|png)$/;
+export const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+export const TEXT_LIMITS = { name: 100, address: 200, city: 100 };
+export const DESCRIPTION_LIMIT = 2000;
+export const IMAGE_URL_LIMIT = 500;
+export const BUNDLED_IMAGE_PATTERN = /^\/images\/venues\/[a-z0-9-]+\.(webp|jpg|png)$/;
 const ALLOWED_KEYS = [
   "name",
   "address",
@@ -17,7 +17,7 @@ const ALLOWED_KEYS = [
   "imageUrl",
 ];
 
-function validateOpeningHoursList(value, maps) {
+export function validateOpeningHoursList(value, maps) {
   if (value === undefined) {
     maps.missingKeyMap.openingHoursList = "openingHoursList je povinný.";
     return;
@@ -131,11 +131,11 @@ function validateDtoIn(dtoIn) {
   }
 }
 
-function toTime(hourMinute) {
+export function toTime(hourMinute) {
   return new Date(`1970-01-01T${hourMinute}:00.000Z`);
 }
 
-function toHourMinute(time) {
+export function toHourMinute(time) {
   return time.toISOString().slice(11, 16);
 }
 

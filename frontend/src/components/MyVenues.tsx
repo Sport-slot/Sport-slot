@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowClockwise, ArrowRight, Buildings, MapPin, Plus, WarningCircle } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowRight, Buildings, MapPin, PencilSimple, Plus, WarningCircle } from "@phosphor-icons/react";
 import { ApiError } from "@/lib/api";
 import { isOptimizableImage, venueImageSrc } from "@/lib/venueImages";
 import { capitalize, imageForSports } from "@/lib/venueVisuals";
@@ -54,7 +54,7 @@ export function MyVenues() {
     };
   }, [attempt]);
 
-  function updateVenue(id: string, patch: Pick<MyVenue, "active" | "deactivatedAt">) {
+  function patchVenue(id: string, patch: Pick<MyVenue, "active" | "deactivatedAt">) {
     setState((current) => current.status === "done"
       ? { status: "done", venues: current.venues.map((venue) => (venue.id === id ? { ...venue, ...patch } : venue)) }
       : current);
@@ -144,8 +144,11 @@ export function MyVenues() {
                     </p>
                     <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-3">
                       <p className="text-sm leading-snug text-muted">{status.hint}</p>
-                      <div className="relative z-10 -mr-2 shrink-0">
-                        <VenueActivationButton venue={venue} onChange={(patch) => updateVenue(venue.id, patch)} />
+                      <div className="relative z-10 -mr-2 flex shrink-0 items-center">
+                        <Link href={`/venues/${venue.id}/edit`} aria-label={`Upravit sportoviště ${venue.name}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-foreground">
+                          <PencilSimple size={16} aria-hidden="true" /> Upravit
+                        </Link>
+                        <VenueActivationButton venue={venue} onChange={(patch) => patchVenue(venue.id, patch)} />
                       </div>
                     </div>
                   </div>

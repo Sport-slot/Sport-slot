@@ -16,7 +16,7 @@ import {
   prepareVenueImage,
   stockVenuePhotos,
 } from "@/lib/venueImages";
-import type { VenuePhoto } from "./steps";
+import { photoSrc, type VenuePhoto } from "./steps";
 
 function formatBytes(bytes: number): string {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB` : `${Math.round(bytes / 1024)} kB`;
@@ -74,7 +74,31 @@ export function StepPhoto({
       <section aria-labelledby="venue-photo-upload-title">
         <h3 id="venue-photo-upload-title" className="text-sm font-semibold text-foreground">Vlastní fotka</h3>
 
-        {photo.kind === "upload" ? (
+        {photo.kind === "current" ? (
+          <div className="mt-3 overflow-hidden rounded-2xl border border-line">
+            <div className="relative aspect-[16/9] bg-surface">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photoSrc(photo) ?? ""} alt="Současná fotka sportoviště" className="size-full object-cover" />
+              {processing && (
+                <div className="absolute inset-0 flex items-center justify-center bg-page/70">
+                  <CircleNotch size={28} className="animate-spin" aria-hidden="true" />
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+              <p className="text-sm font-semibold text-foreground">Současná fotka</p>
+              <div className="flex gap-2">
+                <label htmlFor="venue-photo-input" className={`button button-outline min-h-11 cursor-pointer gap-2 px-4 py-2 ${disabled || processing ? "pointer-events-none opacity-50" : ""}`}>
+                  <ArrowsClockwise size={16} aria-hidden="true" /> Vyměnit
+                </label>
+                {fileInput}
+                <button type="button" disabled={disabled} onClick={() => onChange({ kind: "none" })} className="button button-outline min-h-11 gap-2 px-4 py-2 disabled:opacity-50">
+                  <Trash size={16} aria-hidden="true" /> Odebrat
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : photo.kind === "upload" ? (
           <div className="mt-3 overflow-hidden rounded-2xl border border-line">
             <div className="relative aspect-[16/9] bg-surface">
               {/* eslint-disable-next-line @next/next/no-img-element */}

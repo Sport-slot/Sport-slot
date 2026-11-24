@@ -1,4 +1,4 @@
-import type { PreparedImage } from "@/lib/venueImages";
+import { venueImageSrc, type PreparedImage } from "@/lib/venueImages";
 import type { VenueFormErrors } from "@/lib/venueForm";
 
 export const wizardSteps = [
@@ -13,7 +13,8 @@ export type WizardStepId = (typeof wizardSteps)[number]["id"];
 export type VenuePhoto =
   | { kind: "none" }
   | { kind: "stock"; src: string; label: string }
-  | { kind: "upload"; image: PreparedImage; uploadedUrl?: string };
+  | { kind: "upload"; image: PreparedImage; uploadedUrl?: string }
+  | { kind: "current"; imageUrl: string };
 
 export function stepHasErrors(stepIndex: number, errors: VenueFormErrors): boolean {
   if (stepIndex === 0) return Boolean(errors.name || errors.address || errors.city || errors.description);
@@ -24,5 +25,6 @@ export function stepHasErrors(stepIndex: number, errors: VenueFormErrors): boole
 export function photoSrc(photo: VenuePhoto): string | null {
   if (photo.kind === "stock") return photo.src;
   if (photo.kind === "upload") return photo.image.previewUrl;
+  if (photo.kind === "current") return venueImageSrc(photo.imageUrl);
   return null;
 }

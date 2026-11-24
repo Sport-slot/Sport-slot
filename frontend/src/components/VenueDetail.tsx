@@ -13,6 +13,7 @@ import {
   House,
   MapPin,
   NavigationArrow,
+  PencilSimple,
   Plus,
   ShareNetwork,
   Sun,
@@ -246,6 +247,11 @@ function VenueHero({ venue, sports, backHref, onChange }: { venue: Venue; sports
               <ArrowsOutSimple size={18} aria-hidden="true" />
             </button>
             <ShareVenue className={glass} />
+            {venue.isOwner && (
+              <Link href={`/venues/${venue.id}/edit`} className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium ${glass}`}>
+                <PencilSimple size={16} aria-hidden="true" /> <span>Upravit</span>
+              </Link>
+            )}
             {venue.isOwner && <VenueActivationButton venue={venue} onChange={onChange} variant="glass" />}
           </div>
         </div>
@@ -363,8 +369,8 @@ function VenueContent({ venue, backHref, onChange }: {
           {venue.courts.length > 0 && (
             <>
               <p role="status" className="sr-only">Zobrazeno {courts.length} z {venue.courts.length} kurtů a hřišť</p>
-              <div aria-hidden="true" className={`mt-10 hidden gap-8 border-b border-line pb-3 text-xs font-medium text-muted md:grid ${courtColumns}`}>
-                <span>#</span><span>Kurt</span><span>Sport</span><span>Povrch</span><span>Prostředí</span>
+              <div aria-hidden="true" className={`mt-10 hidden gap-8 border-b border-line pb-3 text-xs font-medium text-muted md:grid ${venue.isOwner ? ownerCourtColumns : courtColumns}`}>
+                <span>#</span><span>Kurt</span><span>Sport</span><span>Povrch</span><span>Prostředí</span>{venue.isOwner && <span className="text-right">Správa</span>}
               </div>
               <ul id="venue-court-list" className="mt-8 border-t border-line md:mt-0 md:border-t-0">
                 {courts.map((court) => (
@@ -447,12 +453,13 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 }
 
 const courtColumns = "md:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1.3fr)_7rem]";
+const ownerCourtColumns = "md:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_6rem_8.5rem]";
 
 function CourtRow({ court, number, highlight, pricingHref }: { court: Court; number: number; highlight: string; pricingHref?: string }) {
   const sports = courtSports(court);
 
   return (
-    <li className={`grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 border-b border-line py-6 md:items-baseline md:gap-8 md:py-7 ${courtColumns}`}>
+    <li className={`grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 border-b border-line py-6 md:items-baseline md:gap-8 md:py-7 ${pricingHref ? ownerCourtColumns : courtColumns}`}>
       <span aria-hidden="true" className="font-display text-sm font-semibold text-muted tabular-nums md:text-base">{String(number).padStart(2, "0")}</span>
       <h3 className="font-display text-xl leading-snug font-semibold tracking-[-.02em] [overflow-wrap:anywhere] md:text-2xl">{court.name}</h3>
       <p className="col-start-2 text-[15px] leading-6 md:col-start-auto [overflow-wrap:anywhere]">
@@ -471,8 +478,8 @@ function CourtRow({ court, number, highlight, pricingHref }: { court: Court; num
         {court.indoor ? "V hale" : "Venku"}
       </p>
       {pricingHref && (
-        <Link href={pricingHref} className="col-start-2 mt-2 inline-flex min-h-11 items-center gap-1.5 justify-self-start text-sm font-semibold underline-offset-4 hover:underline md:col-[2/-1] md:mt-0">
-          <CurrencyCircleDollar size={17} aria-hidden="true" /> Upravit ceník
+        <Link href={pricingHref} aria-label={`Ceník kurtu ${court.name}`} className="col-start-2 mt-3 inline-flex min-h-10 items-center gap-1.5 justify-self-start rounded-full border border-line px-3.5 text-sm font-semibold transition-colors hover:border-foreground md:col-start-auto md:mt-0 md:justify-self-end md:self-center">
+          <CurrencyCircleDollar size={17} aria-hidden="true" /> Ceník
         </Link>
       )}
     </li>
