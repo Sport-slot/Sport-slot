@@ -5,6 +5,7 @@ import {
   type DayOfWeek,
   type UuAppErrorMap,
 } from "@/lib/api";
+import type { VenueUpdateFields } from "@/lib/venueForm";
 
 export const venuePageSize = 12;
 
@@ -79,6 +80,19 @@ export async function getVenue(id: string): Promise<VenueDetail> {
     throw await toApiError(response);
   }
   return (await response.json()) as VenueDetail;
+}
+
+export type VenueUpdateDtoIn = { id: string } & Partial<VenueUpdateFields>;
+
+export async function updateVenue(dtoIn: VenueUpdateDtoIn): Promise<void> {
+  const response = await fetch(`${apiBaseUrl}/venue/update`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(dtoIn),
+  });
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
 }
 
 export type VenueActiveState = {

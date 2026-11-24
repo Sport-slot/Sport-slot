@@ -13,6 +13,7 @@ import {
   House,
   MapPin,
   NavigationArrow,
+  PencilSimple,
   Plus,
   ShareNetwork,
   Sun,
@@ -246,6 +247,11 @@ function VenueHero({ venue, sports, backHref, onChange }: { venue: Venue; sports
               <ArrowsOutSimple size={18} aria-hidden="true" />
             </button>
             <ShareVenue className={glass} />
+            {venue.isOwner && (
+              <Link href={`/venues/${venue.id}/edit`} className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium ${glass}`}>
+                <PencilSimple size={16} aria-hidden="true" /> <span>Upravit</span>
+              </Link>
+            )}
             {venue.isOwner && <VenueActivationButton venue={venue} onChange={onChange} variant="glass" />}
           </div>
         </div>

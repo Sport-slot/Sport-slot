@@ -1,4 +1,13 @@
-import type { DayOfWeek, VenueCreateDtoIn } from "@/lib/api";
+import type { DayOfWeek, OpeningHoursDtoIn, VenueCreateDtoIn } from "@/lib/api";
+
+export type VenueUpdateFields = {
+  name: string;
+  address: string;
+  city: string;
+  description: string | null;
+  imageUrl: string | null;
+  openingHoursList: OpeningHoursDtoIn[];
+};
 
 export const venueLimits = {
   name: 100,
@@ -36,6 +45,33 @@ export type VenueFormValues = {
 export type VenueFormErrors = Partial<
   Record<"name" | "address" | "city" | "description" | "hours", string>
 > & { days?: Partial<Record<DayOfWeek, string>> };
+
+export function venueFormFromDetail(venue: {
+  name: string;
+  address: string;
+  city: string;
+  description?: string | null;
+  openingHours: { dayOfWeek: DayOfWeek; openTime: string; closeTime: string }[];
+}): VenueFormValues {
+  const empty = emptyVenueForm();
+  const hours = Object.fromEntries(
+    daysOfWeek.map((day) => {
+      const current = venue.openingHours.find((item) => item.dayOfWeek === day);
+      return [day, current ? { open: true, openTime: current.openTime, closeTime: current.closeTime } : { ...empty.hours[day], open: false }];
+    }),
+  ) as Record<DayOfWeek, DayHours>;
+  return { name: venue.name, address: venue.address, city: venue.city, description: venue.description ?? "", hours };
+}
+
+export function venueChanges(initial: VenueFormValues, values: VenueFormValues): Partial<VenueUpdateFields> {
+  const changes: Partial<VenueUpdateFields> = {};
+  for (const key of ["name", "address", "city"] as const) {
+    if (values[key].trim() !== initial[key].trim()) changes[key] = values[key].trim();
+  }
+  if (values.description.trim() !== initial.description.trim()) changes.description = values.description.trim() || null;
+  if (!sameHours(values.hours, initial.hours)) changes.openingHoursList = toVenueCreateDtoIn(values).openingHoursList;
+  return changes;
+}
 
 export function emptyVenueForm(): VenueFormValues {
   const hours = Object.fromEntries(
