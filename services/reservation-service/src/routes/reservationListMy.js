@@ -5,6 +5,7 @@ import { playerIdFromGateway } from '../gatewayAuth.js'
 const ALLOWED_KEYS = ['pageIndex', 'pageSize', 'period']
 const PERIODS = ['upcoming', 'past']
 const DEFAULT_PAGE_SIZE = 20
+const MAX_PAGE_SIZE = 100
 
 const reservationSelect = {
 	id: true,
@@ -20,11 +21,11 @@ const reservationSelect = {
 	cancelledAt: true,
 }
 
-function parsePageNumber(value, defaultValue, minimum) {
+function parsePageNumber(value, defaultValue, minimum, maximum = Number.MAX_SAFE_INTEGER) {
 	if (value === undefined) return defaultValue
 	if (typeof value !== 'string' || !/^\d+$/.test(value)) return null
 	const number = Number(value)
-	if (!Number.isSafeInteger(number) || number < minimum) return null
+	if (!Number.isSafeInteger(number) || number < minimum || number > maximum) return null
 	return number
 }
 
@@ -57,10 +58,10 @@ export function createReservationListMyRouter({ db, gatewaySecret = process.env.
 		const invalidValueKeyMap = {}
 
 		const pageIndex = parsePageNumber(req.query.pageIndex, 0, 0)
-		const pageSize = parsePageNumber(req.query.pageSize, DEFAULT_PAGE_SIZE, 1)
+		const pageSize = parsePageNumber(req.query.pageSize, DEFAULT_PAGE_SIZE, 1, MAX_PAGE_SIZE)
 
 		if (pageIndex === null) invalidValueKeyMap.pageIndex = 'pageIndex musí být celé číslo od 0.'
-		if (pageSize === null) invalidValueKeyMap.pageSize = 'pageSize musí být kladné celé číslo.'
+		if (pageSize === null) invalidValueKeyMap.pageSize = `pageSize musí být celé číslo od 1 do ${MAX_PAGE_SIZE}.`
 
 		if (period !== undefined) {
 			if (typeof period !== 'string') {
@@ -79,10 +80,10 @@ export function createReservationListMyRouter({ db, gatewaySecret = process.env.
 			throw invalidDtoIn({ invalidValueKeyMap: { pageIndex: 'Požadovaná stránka je příliš vysoká.' } })
 		}
 
-		// Nadcházející = ještě neskončila, minulé = už skončila. Zrušené rezervace se vracejí se stavem CANCELLED.
+		const current = now()
 		const where = { playerId }
-		if (period === 'upcoming') where.endAt = { gt: now() }
-		if (period === 'past') where.endAt = { lte: now() }
+		if (period === 'upcoming') Object.assign(where, { status: 'ACTIVE', endAt: { gt: current } })
+		if (period === 'past') where.endAt = { lte: current }
 
 		const direction = period === 'upcoming' ? 'asc' : 'desc'
 
