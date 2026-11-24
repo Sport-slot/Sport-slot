@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ApiError } from "@/lib/api";
-import { type CourtAvailability, getCourtAvailability, pragueToday } from "@/lib/courts";
+import { type CourtAvailability, type CourtSlot, getCourtAvailability, pragueToday } from "@/lib/courts";
 import type { Court } from "@/lib/venues";
 
 type LoadState =
@@ -72,7 +72,13 @@ export function FreeSlots({ courts }: { courts: Court[] }) {
   );
 }
 
+function slotLabel(slot: CourtSlot, now: number): string {
+  if (slot.free) return "Volné";
+  return Date.parse(slot.startAt) <= now ? "Proběhlo" : "Obsazeno";
+}
+
 function Slots({ availability }: { availability: CourtAvailability }) {
+  const now = Date.now();
   if (availability.openTime === null) {
     return <p className="text-muted">Tento den je kurt zavřený.</p>;
   }
@@ -87,7 +93,7 @@ function Slots({ availability }: { availability: CourtAvailability }) {
           className={`rounded-xl border px-4 py-3 text-sm ${slot.free ? "border-brand-500 bg-ball text-brand-900" : "border-line bg-surface text-muted"}`}
         >
           <span className="block font-semibold tabular-nums">{slot.startTime}–{slot.endTime}</span>
-          <span className="block text-xs">{slot.free ? "Volné" : "Obsazeno"}</span>
+          <span className="block text-xs">{slotLabel(slot, now)}</span>
         </li>
       ))}
     </ul>

@@ -62,6 +62,17 @@ describe("FreeSlots", () => {
     expect(api.getCourtAvailability).toHaveBeenLastCalledWith("c2", expect.any(String));
   });
 
+  it("labels past hours as over instead of occupied", async () => {
+    api.getCourtAvailability.mockResolvedValue(availability({
+      slotList: [
+        { startTime: "07:00", endTime: "08:00", startAt: "2020-01-01T06:00:00.000Z", endAt: "2020-01-01T07:00:00.000Z", free: false },
+      ],
+    }));
+    render(<FreeSlots courts={courts} />);
+
+    expect((await screen.findByRole("list", { name: "Termíny" })).textContent).toContain("07:00–08:00Proběhlo");
+  });
+
   it("says when the court is closed that day", async () => {
     api.getCourtAvailability.mockResolvedValue(availability({ openTime: null, closeTime: null, slotList: [] }));
     render(<FreeSlots courts={courts} />);

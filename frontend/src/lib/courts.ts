@@ -61,7 +61,6 @@ export async function getCourtAvailability(courtId: string, date: string): Promi
 
 const pragueDateFormat = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Prague", year: "numeric", month: "2-digit", day: "2-digit" });
 
-// Dnešní datum v Praze jako "YYYY-MM-DD", stejný formát jaký očekává court/availability.
 export function pragueToday(now = new Date()): string {
   return pragueDateFormat.format(now);
 }
