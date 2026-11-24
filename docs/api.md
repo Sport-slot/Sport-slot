@@ -338,7 +338,7 @@ Zajišťuje `auth-service`. Hráč požádá o roli správce a administrátor ž
 
 ### POST /api/managerRequest/approve
 
-**Popis:** Schválení žádosti. Žádost přejde do stavu `APPROVED` a žadatel dostane roli `MANAGER`. Obojí se provede v jedné transakci.
+**Popis:** Schválení žádosti. Žádost přejde do stavu `APPROVED`, žadatel dostane roli `MANAGER` a do audit logu se zapíše `managerRequest/approve` (`entityType: ManagerRequest`, `details.targetUserId`). Vše se provede v jedné transakci.
 
 **Práva:** Administrátor (role `ADMIN`).
 

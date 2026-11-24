@@ -16,7 +16,6 @@ function setup() {
 		[PLAYER_ID, { id: PLAYER_ID, email: 'p@x.cz', name: 'Player', roles: ['PLAYER'] }],
 	])
 	const requests = new Map()
-	const auditCalls = []
 
 	const userDao = { get: async (id) => users.get(id) ?? null }
 
@@ -28,6 +27,7 @@ function setup() {
 			[...requests.values()]
 				.filter((r) => !status || r.status === status)
 				.map((r) => ({ ...r, user: users.get(r.userId) })),
+		isPendingConflict: (error) => error?.code === 'P2002',
 		create: async ({ userId, message }) => {
 			const r = {
 				id: randomUUID(),
@@ -57,16 +57,32 @@ function setup() {
 		userDao,
 		managerRequestDao,
 		gatewaySecret: SECRET,
-		audit: async (event) => auditCalls.push(event),
 	})
 
 	const seedPending = () =>
 		managerRequestDao.create({ userId: PLAYER_ID, message: 'Chci spravovat kurty' })
 
-	return { app, users, requests, auditCalls, seedPending }
+	return { app, users, requests, managerRequestDao, seedPending }
 }
 
 describe('POST /managerRequest/create', () => {
+	it('stores a trimmed message and drops a blank one', async () => {
+		const { app, requests } = setup()
+		const res = await request(app).post('/managerRequest/create').set(as(PLAYER_ID)).send({ message: '   ' })
+		assert.equal(res.status, 200)
+		assert.equal(requests.get(res.body.id).message, null)
+	})
+
+	it('returns 409 when a parallel request hits the one-pending index', async () => {
+		const { app, managerRequestDao } = setup()
+		managerRequestDao.create = async () => {
+			throw Object.assign(new Error('unique'), { code: 'P2002' })
+		}
+		const res = await request(app).post('/managerRequest/create').set(as(PLAYER_ID)).send({ message: 'Ahoj' })
+		assert.equal(res.status, 409)
+		assert.ok(res.body.uuAppErrorMap['managerRequest/create/managerRequestAlreadyPending'])
+	})
+
 	it('creates a PENDING request for a player', async () => {
 		const { app, requests } = setup()
 		const res = await request(app)
@@ -159,8 +175,8 @@ describe('POST /managerRequest/approve and reject', () => {
 		assert.equal(res.status, 404)
 	})
 
-	it('approve: sets APPROVED, grants MANAGER, emits audit event', async () => {
-		const { app, users, seedPending, auditCalls } = setup()
+	it('approve: sets APPROVED and grants MANAGER', async () => {
+		const { app, users, seedPending } = setup()
 		const r = await seedPending()
 		const res = await request(app)
 			.post('/managerRequest/approve')
@@ -170,12 +186,10 @@ describe('POST /managerRequest/approve and reject', () => {
 		assert.equal(res.body.status, 'APPROVED')
 		assert.equal(res.body.decidedById, ADMIN_ID)
 		assert.ok(users.get(PLAYER_ID).roles.includes('MANAGER'))
-		assert.equal(auditCalls.length, 1)
-		assert.equal(auditCalls[0].action, 'MANAGER_APPROVED')
 	})
 
-	it('reject: sets REJECTED, no MANAGER role, no audit event', async () => {
-		const { app, users, seedPending, auditCalls } = setup()
+	it('reject: sets REJECTED and keeps the roles', async () => {
+		const { app, users, seedPending } = setup()
 		const r = await seedPending()
 		const res = await request(app)
 			.post('/managerRequest/reject')
@@ -184,7 +198,6 @@ describe('POST /managerRequest/approve and reject', () => {
 		assert.equal(res.status, 200)
 		assert.equal(res.body.status, 'REJECTED')
 		assert.ok(!users.get(PLAYER_ID).roles.includes('MANAGER'))
-		assert.equal(auditCalls.length, 0)
 	})
 
 	it('returns 409 when the request was already decided', async () => {

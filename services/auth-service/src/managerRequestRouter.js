@@ -52,7 +52,6 @@ export function createManagerRequestRouter({
 	userDao,
 	managerRequestDao,
 	gatewaySecret,
-	audit = async () => {},
 }) {
 	const router = express.Router()
 
@@ -85,14 +84,16 @@ export function createManagerRequestRouter({
 		next()
 	}
 
-    	router.post('/managerRequest/create', async (req, res) => {
+	router.post('/managerRequest/create', async (req, res) => {
 		const user = await authenticate(req)
 		const dtoIn = readDtoIn(req)
-		const { message } = dtoIn
+		const { message: rawMessage } = dtoIn
 
-		if (message !== undefined && typeof message !== 'string') {
+		if (rawMessage !== undefined && typeof rawMessage !== 'string') {
 			throw invalidDtoIn({ invalidTypeKeyMap: { message: 'message musí být řetězec.' } })
 		}
+
+		const message = rawMessage?.trim() || undefined
 
 		if (message && message.length > MAX_MESSAGE_LENGTH) {
 			throw invalidDtoIn({
@@ -108,7 +109,15 @@ export function createManagerRequestRouter({
 			throw new AppError('managerRequestAlreadyPending', 'Žádost už čeká na vyřízení.', 409)
 		}
 
-		const created = await managerRequestDao.create({ userId: user.id, message })
+		let created
+		try {
+			created = await managerRequestDao.create({ userId: user.id, message })
+		} catch (error) {
+			if (managerRequestDao.isPendingConflict?.(error)) {
+				throw new AppError('managerRequestAlreadyPending', 'Žádost už čeká na vyřízení.', 409)
+			}
+			throw error
+		}
 
 		res.json({ ...toDtoOut(created), uuAppErrorMap: unsupportedKeys(req, dtoIn, ['message']) })
 	})
@@ -130,7 +139,7 @@ export function createManagerRequestRouter({
 		})
 	})
 
-    	function decideHandler(status) {
+	function decideHandler(status) {
 		return async (req, res) => {
 			const dtoIn = readDtoIn(req)
 			const id = readId(dtoIn)
@@ -148,20 +157,6 @@ export function createManagerRequestRouter({
 			const decided = await managerRequestDao.decide(id, status, req.user.id)
 
 			if (!decided) throw alreadyDecided()
-
-			if (status === 'APPROVED') {
-				try {
-					await audit({
-						action: 'MANAGER_APPROVED',
-						userId: req.user.id,
-						entityType: 'manager_request',
-						entityId: decided.id,
-						details: { targetUserId: decided.userId },
-					})
-				} catch (err) {
-					console.warn('audit failed', err)
-				}
-			}
 
 			res.json({ ...toDtoOut(decided), uuAppErrorMap: unsupportedKeys(req, dtoIn, ['id']) })
 		}
