@@ -81,7 +81,7 @@ test('GET /reservation/listMy with period=upcoming filters by end time and sorts
 	const response = await listMy(db, { period: 'upcoming' })
 
 	assert.equal(response.status, 200)
-	assert.deepEqual(db.calls.findMany[0].where, { playerId: PLAYER_ID, endAt: { gt: NOW } })
+	assert.deepEqual(db.calls.findMany[0].where, { playerId: PLAYER_ID, status: 'ACTIVE', endAt: { gt: NOW } })
 	assert.equal(db.calls.findMany[0].orderBy[0].startAt, 'asc')
 })
 
@@ -103,6 +103,15 @@ test('GET /reservation/listMy paginates', async () => {
 	assert.equal(db.calls.findMany[0].skip, 20)
 	assert.equal(db.calls.findMany[0].take, 10)
 	assert.deepEqual(response.body.pageInfo, { pageIndex: 2, pageSize: 10, total: 45 })
+})
+
+test('GET /reservation/listMy accepts the maximum page size and rejects a larger one', async () => {
+	const ok = await listMy(fakeDb(), { pageSize: '100' })
+	const tooBig = await listMy(fakeDb(), { pageSize: '101' })
+
+	assert.equal(ok.status, 200)
+	assert.equal(tooBig.status, 400)
+	assert.ok(tooBig.body.uuAppErrorMap['reservation/listMy/invalidDtoIn'].paramMap.invalidValueKeyMap.pageSize)
 })
 
 test('GET /reservation/listMy returns an empty list without looking up courts', async () => {
