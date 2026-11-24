@@ -89,3 +89,20 @@ const priceFormat = new Intl.NumberFormat("cs-CZ", { style: "currency", currency
 export function formatPrice(price: number): string {
   return priceFormat.format(price);
 }
+
+export function toMinutes(time: string): number {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+export function priceGaps(openTime: string, closeTime: string, dayRules: PriceRule[]): { startTime: string; endTime: string }[] {
+  const gaps: { startTime: string; endTime: string }[] = [];
+  let cursor = openTime;
+  for (const rule of sortPriceRules(dayRules)) {
+    if (rule.endTime <= cursor) continue;
+    if (rule.startTime > cursor && cursor < closeTime) gaps.push({ startTime: cursor, endTime: rule.startTime < closeTime ? rule.startTime : closeTime });
+    if (rule.endTime > cursor) cursor = rule.endTime;
+  }
+  if (cursor < closeTime) gaps.push({ startTime: cursor, endTime: closeTime });
+  return gaps;
+}
