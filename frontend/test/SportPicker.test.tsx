@@ -21,6 +21,7 @@ describe("SportPicker", () => {
     const onChange = vi.fn();
     const user = userEvent.setup();
     render(<SportPicker value={["tenis"]} maxLength={50} onChange={onChange} />);
+    await user.click(screen.getByRole("button", { name: "Jiný sport" }));
     await user.type(screen.getByLabelText("Jiný sport"), "  Nohejbal {Enter}");
     expect(onChange).toHaveBeenLastCalledWith(["tenis", "nohejbal"]);
   });
@@ -29,8 +30,9 @@ describe("SportPicker", () => {
     const onChange = vi.fn();
     const user = userEvent.setup();
     render(<SportPicker value={["tenis"]} maxLength={50} onChange={onChange} />);
+    await user.click(screen.getByRole("button", { name: "Jiný sport" }));
     await user.type(screen.getByLabelText("Jiný sport"), "TENIS");
-    await user.click(screen.getByRole("button", { name: /přidat/i }));
+    await user.click(screen.getByRole("button", { name: "Přidat sport" }));
     expect(onChange).not.toHaveBeenCalled();
   });
 

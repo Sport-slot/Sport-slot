@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api";
 import { isOptimizableImage, venueImageSrc } from "@/lib/venueImages";
 import { capitalize, imageForSports } from "@/lib/venueVisuals";
 import { listMyVenues, type MyVenue } from "@/lib/venues";
+import { VenueActivationButton } from "@/components/VenueManagement";
 
 type LoadState =
   | { status: "loading" }
@@ -22,7 +23,7 @@ function courtsLabel(count: number): string {
 
 function statusOf(venue: MyVenue): { label: string; hint: string; className: string } {
   if (!venue.active) {
-    return { label: "Deaktivované", hint: "Hráči ho nevidí. Na detailu ho můžete znovu aktivovat.", className: "bg-surface text-muted" };
+    return { label: "Deaktivované", hint: "Hráči ho nevidí ve vyhledávání.", className: "bg-surface text-muted" };
   }
   if (venue.courtCount === 0) {
     return { label: "Bez kurtů", hint: "Ve vyhledávání se ukáže po přidání prvního kurtu.", className: "bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-100" };
@@ -52,6 +53,12 @@ export function MyVenues() {
       active = false;
     };
   }, [attempt]);
+
+  function updateVenue(id: string, patch: Pick<MyVenue, "active" | "deactivatedAt">) {
+    setState((current) => current.status === "done"
+      ? { status: "done", venues: current.venues.map((venue) => (venue.id === id ? { ...venue, ...patch } : venue)) }
+      : current);
+  }
 
   return (
     <main id="main-content" className="section-wrap pt-8 pb-20 md:pt-12">
@@ -119,24 +126,30 @@ export function MyVenues() {
             const src = venue.imageUrl ? venueImageSrc(venue.imageUrl) : imageForSports(venue.sports);
             return (
               <li key={venue.id}>
-                <Link
-                  href={`/venues/${venue.id}`}
-                  className={`group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-page transition-[border-color,box-shadow] duration-200 hover:border-muted/50 hover:shadow-[0_16px_36px_-24px_rgba(23,59,43,.35)] ${venue.active ? "" : "opacity-80"}`}
-                >
+                <article className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-page transition-[border-color,box-shadow] duration-200 has-[a:hover]:border-muted/50 has-[a:hover]:shadow-[0_16px_36px_-24px_rgba(23,59,43,.35)] ${venue.active ? "" : "bg-surface/40"}`}>
                   <div className="relative aspect-[16/9] overflow-hidden bg-surface">
-                    <Image src={src} unoptimized={!isOptimizableImage(src)} alt="" fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className={`object-cover transition duration-500 group-hover:scale-[1.04] ${venue.active ? "" : "grayscale"}`} />
+                    <Image src={src} unoptimized={!isOptimizableImage(src)} alt="" fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className={`object-cover transition duration-500 group-has-[a:hover]:scale-[1.04] ${venue.active ? "" : "opacity-70 grayscale"}`} />
                     <span className={`absolute top-3 left-3 rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}>{status.label}</span>
                   </div>
                   <div className="flex flex-1 flex-col p-5">
                     <p className="flex items-center gap-1.5 text-sm text-muted"><MapPin size={15} aria-hidden="true" />{venue.city}</p>
-                    <h2 className="mt-1.5 font-display text-xl leading-snug font-semibold tracking-[-.02em]">{venue.name}</h2>
-                    <p className="mt-2 text-sm text-muted">
+                    <h2 className="mt-1.5 font-display text-xl leading-snug font-semibold tracking-[-.02em]">
+                      <Link href={`/venues/${venue.id}`} className="outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-foreground">
+                        {venue.name}
+                      </Link>
+                    </h2>
+                    <p className="mt-2 mb-5 text-sm text-muted">
                       {courtsLabel(venue.courtCount)}
                       {venue.sports.length > 0 && `: ${venue.sports.slice(0, 3).map(capitalize).join(", ")}`}
                     </p>
-                    <p className="mt-auto pt-5 text-sm leading-relaxed text-muted">{status.hint}</p>
+                    <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-3">
+                      <p className="text-sm leading-snug text-muted">{status.hint}</p>
+                      <div className="relative z-10 -mr-2 shrink-0">
+                        <VenueActivationButton venue={venue} onChange={(patch) => updateVenue(venue.id, patch)} />
+                      </div>
+                    </div>
                   </div>
-                </Link>
+                </article>
               </li>
             );
           })}

@@ -5,7 +5,7 @@ import { MyVenues } from "@/components/MyVenues";
 import { ApiError } from "@/lib/api";
 import type { MyVenue } from "@/lib/venues";
 
-const venues = vi.hoisted(() => ({ listMyVenues: vi.fn() }));
+const venues = vi.hoisted(() => ({ listMyVenues: vi.fn(), setVenueActive: vi.fn() }));
 
 vi.mock("@/lib/venues", () => venues);
 vi.mock("next/image", () => ({
@@ -29,6 +29,7 @@ function venue(overrides: Partial<MyVenue>): MyVenue {
 
 beforeEach(() => {
   venues.listMyVenues.mockReset();
+  venues.setVenueActive.mockReset();
 });
 
 describe("MyVenues", () => {
@@ -60,5 +61,33 @@ describe("MyVenues", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: /zkusit znovu/i }));
     expect(await screen.findByText("Spravujete 1 sportoviště.")).toBeTruthy();
     expect(venues.listMyVenues).toHaveBeenCalledTimes(2);
+  });
+
+  it("deactivates a venue from its card after confirmation", async () => {
+    venues.listMyVenues.mockResolvedValue([venue({})]);
+    venues.setVenueActive.mockResolvedValue({ id: "v1", name: "Sportcentrum", active: false, deactivatedAt: "2026-11-24T10:00:00.000Z", uuAppErrorMap: {} });
+    HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) { this.open = true; };
+    HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) { this.open = false; };
+    const user = userEvent.setup();
+    render(<MyVenues />);
+
+    await user.click(await screen.findByRole("button", { name: "Deaktivovat sportoviště Sportcentrum" }));
+    await user.click(screen.getByRole("button", { name: "Deaktivovat", hidden: true }));
+
+    expect(venues.setVenueActive).toHaveBeenCalledWith("v1", false);
+    expect(await screen.findByText("Deaktivované")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Znovu aktivovat sportoviště Sportcentrum" })).toBeTruthy();
+  });
+
+  it("reactivates a deactivated venue right away", async () => {
+    venues.listMyVenues.mockResolvedValue([venue({ active: false, deactivatedAt: "2026-11-20T10:00:00.000Z" })]);
+    venues.setVenueActive.mockResolvedValue({ id: "v1", name: "Sportcentrum", active: true, deactivatedAt: null, uuAppErrorMap: {} });
+    const user = userEvent.setup();
+    render(<MyVenues />);
+
+    await user.click(await screen.findByRole("button", { name: "Znovu aktivovat sportoviště Sportcentrum" }));
+
+    expect(venues.setVenueActive).toHaveBeenCalledWith("v1", true);
+    expect(await screen.findByText("Aktivní")).toBeTruthy();
   });
 });

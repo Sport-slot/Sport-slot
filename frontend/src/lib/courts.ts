@@ -92,3 +92,13 @@ export function nextCourtName(existing: string[]): string {
 export function splitSports(sport: string): string[] {
   return sport.split(",").map((value) => value.trim()).filter(Boolean);
 }
+
+export function suggestCourtName(sports: string[], existing: string[]): string {
+  if (sports.length !== 1) return nextCourtName(existing);
+  const prefix = sports[0].trim().replace(/^\p{L}/u, (letter) => letter.toLocaleUpperCase("cs"));
+  const taken = new Set(existing.map((name) => name.trim().toLocaleLowerCase("cs")));
+  const sameSport = existing.filter((name) => name.trim().toLocaleLowerCase("cs").startsWith(prefix.toLocaleLowerCase("cs"))).length;
+  let number = sameSport + 1;
+  while (taken.has(`${prefix} ${number}`.toLocaleLowerCase("cs"))) number += 1;
+  return `${prefix} ${number}`;
+}

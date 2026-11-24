@@ -25,7 +25,7 @@ import { isOptimizableImage, stockVenuePhotos, venueImageSrc } from "@/lib/venue
 import { FreeSlots } from "@/components/FreeSlots";
 import { capitalize, imageForSports } from "@/lib/venueVisuals";
 import { getVenue, type Court, type VenueDetail as Venue } from "@/lib/venues";
-import { DeactivatedNotice, VenueManagement } from "@/components/VenueManagement";
+import { DeactivatedNotice, VenueActivationButton } from "@/components/VenueManagement";
 
 type LoadState =
   | { status: "loading" }
@@ -218,7 +218,7 @@ function DetailSkeleton() {
   );
 }
 
-function VenueHero({ venue, sports, backHref }: { venue: Venue; sports: string[]; backHref: string }) {
+function VenueHero({ venue, sports, backHref, onChange }: { venue: Venue; sports: string[]; backHref: string; onChange: (patch: Pick<Venue, "active" | "deactivatedAt">) => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [failed, setFailed] = useState(false);
@@ -246,6 +246,7 @@ function VenueHero({ venue, sports, backHref }: { venue: Venue; sports: string[]
               <ArrowsOutSimple size={18} aria-hidden="true" />
             </button>
             <ShareVenue className={glass} />
+            {venue.isOwner && <VenueActivationButton venue={venue} onChange={onChange} variant="glass" />}
           </div>
         </div>
 
@@ -326,11 +327,11 @@ function VenueContent({ venue, backHref, onChange }: {
 
   return (
     <>
-      <VenueHero venue={venue} sports={sportNames} backHref={backHref} />
+      <VenueHero venue={venue} sports={sportNames} backHref={backHref} onChange={onChange} />
 
       <div className="section-wrap">
         <FactsBar venue={venue} now={now} mapHref={mapHref} />
-        <DeactivatedNotice venue={venue} />
+        <DeactivatedNotice venue={venue} onChange={onChange} />
 
         <section id="kurty" aria-labelledby="courts-title" className="mt-20 scroll-mt-28 md:mt-28">
           <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
@@ -405,11 +406,6 @@ function VenueContent({ venue, backHref, onChange }: {
           </div>
         </section>
 
-        {venue.isOwner && (
-          <div className="mt-10 max-w-md">
-            <VenueManagement venue={venue} onChange={onChange} />
-          </div>
-        )}
       </div>
     </>
   );
