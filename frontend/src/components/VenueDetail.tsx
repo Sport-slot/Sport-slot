@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   ArrowsOutSimple,
   Check,
+  CurrencyCircleDollar,
   House,
   MapPin,
   NavigationArrow,
@@ -366,7 +367,7 @@ function VenueContent({ venue, backHref, onChange }: {
               </div>
               <ul id="venue-court-list" className="mt-8 border-t border-line md:mt-0 md:border-t-0">
                 {courts.map((court) => (
-                  <CourtRow key={court.id} court={court} number={venue.courts.indexOf(court) + 1} highlight={selectedSport} />
+                  <CourtRow key={court.id} court={court} number={venue.courts.indexOf(court) + 1} highlight={selectedSport} pricingHref={venue.isOwner ? `/venues/${venue.id}/courts/${court.id}/prices` : undefined} />
                 ))}
               </ul>
             </>
@@ -451,7 +452,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 
 const courtColumns = "md:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1.3fr)_7rem]";
 
-function CourtRow({ court, number, highlight }: { court: Court; number: number; highlight: string }) {
+function CourtRow({ court, number, highlight, pricingHref }: { court: Court; number: number; highlight: string; pricingHref?: string }) {
   const sports = courtSports(court);
 
   return (
@@ -473,6 +474,11 @@ function CourtRow({ court, number, highlight }: { court: Court; number: number; 
         {court.indoor ? <House size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
         {court.indoor ? "V hale" : "Venku"}
       </p>
+      {pricingHref && (
+        <Link href={pricingHref} className="col-start-2 mt-2 inline-flex min-h-11 items-center gap-1.5 justify-self-start text-sm font-semibold underline-offset-4 hover:underline md:col-[2/-1] md:mt-0">
+          <CurrencyCircleDollar size={17} aria-hidden="true" /> Upravit ceník
+        </Link>
+      )}
     </li>
   );
 }
