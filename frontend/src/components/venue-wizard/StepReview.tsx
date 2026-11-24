@@ -77,6 +77,7 @@ export function StepReview({
         <p className="text-sm text-foreground">
           {photo.kind === "upload" && `Vlastní fotka (${photo.image.fileName})`}
           {photo.kind === "stock" && `Ilustrační fotka: ${photo.label}`}
+          {photo.kind === "current" && "Současná fotka"}
           {photo.kind === "none" && <span className="text-muted">Bez fotky. Zobrazíme ilustrační obrázek podle sportu.</span>}
         </p>
       </ReviewSection>

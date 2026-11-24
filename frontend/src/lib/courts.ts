@@ -102,3 +102,21 @@ export function suggestCourtName(sports: string[], existing: string[]): string {
   while (taken.has(`${prefix} ${number}`.toLocaleLowerCase("cs"))) number += 1;
   return `${prefix} ${number}`;
 }
+
+export function addDays(date: string, days: number): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+export function dayOfWeekOf(date: string): DayOfWeek {
+  const [year, month, day] = date.split("-").map(Number);
+  return (((new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7) + 1) as DayOfWeek;
+}
+
+export function hourRange(ranges: { start: string; end: string }[], fallback: [number, number] = [8, 22]): number[] {
+  const starts = ranges.map(({ start }) => Number(start.slice(0, 2)));
+  const ends = ranges.map(({ end }) => Number(end.slice(0, 2)) + (end.slice(3) === "00" ? 0 : 1));
+  const from = starts.length > 0 ? Math.min(...starts) : fallback[0];
+  const to = ends.length > 0 ? Math.max(...ends) : fallback[1];
+  return Array.from({ length: Math.max(0, to - from) }, (_, index) => from + index);
+}

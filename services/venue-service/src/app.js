@@ -5,6 +5,7 @@ import { createPriceRuleRouter } from "./routes/priceRule.js";
 import { createVenueCreateRouter } from "./routes/venueCreate.js";
 import { createVenueImageRouter } from "./routes/venueImage.js";
 import { createVenueSetActiveRouter } from "./routes/venueSetActive.js";
+import { createVenueUpdateRouter } from "./routes/venueUpdate.js";
 import { createVenueListMineRouter } from "./routes/venueListMine.js";
 import { getVenue, listVenues } from "./venue.js";
 import { errorHandler, notFound } from "@sportslot/api-format";
@@ -39,6 +40,8 @@ export function createApp({
   app.use("/venue", createVenueCreateRouter({ db, gatewaySecret }));
 
   app.use("/venue", createVenueSetActiveRouter({ db, gatewaySecret }));
+
+  app.use("/venue", createVenueUpdateRouter({ db, gatewaySecret }));
 
   app.use("/venue", createVenueListMineRouter({ db, gatewaySecret }));
 

@@ -41,7 +41,8 @@ describe("MyVenues", () => {
     ]);
     render(<MyVenues />);
     expect(await screen.findByText("Spravujete 3 sportovišť.")).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Sportcentrum/ }).getAttribute("href")).toBe("/venues/v1");
+    expect(screen.getByRole("link", { name: "Sportcentrum" }).getAttribute("href")).toBe("/venues/v1");
+    expect(screen.getByRole("link", { name: "Upravit sportoviště Sportcentrum" }).getAttribute("href")).toBe("/venues/v1/edit");
     expect(screen.getByText("3 kurty: Tenis, Padel")).toBeTruthy();
     expect(screen.getByText("Aktivní")).toBeTruthy();
     expect(screen.getByText("Bez kurtů")).toBeTruthy();

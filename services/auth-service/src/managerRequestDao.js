@@ -17,6 +17,8 @@ export function createManagerRequestDao(db) {
 		create: ({ userId, message }) =>
 			db.managerRequest.create({ data: { userId, message: message ?? null } }),
 
+		isPendingConflict: (error) => error?.code === 'P2002',
+
 		decide: (id, status, adminId) =>
 			db.$transaction(async (tx) => {
 				const { count } = await tx.managerRequest.updateMany({
@@ -37,6 +39,16 @@ export function createManagerRequestDao(db) {
 							data: { roles: { push: 'MANAGER' } },
 						})
 					}
+
+					await tx.auditLog.create({
+						data: {
+							userId: adminId,
+							action: 'managerRequest/approve',
+							entityType: 'ManagerRequest',
+							entityId: request.id,
+							details: { targetUserId: request.userId },
+						},
+					})
 				}
 
 				return request

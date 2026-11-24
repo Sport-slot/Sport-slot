@@ -24,7 +24,6 @@ function toUserDtoOut(user) {
 export function createApp({
 	userDao,
 	managerRequestDao,
-	audit,
 	verifyGoogleIdToken,
 	jwtSecret = process.env.JWT_SECRET,
 	gatewaySecret = process.env.GATEWAY_SECRET,
@@ -100,7 +99,7 @@ export function createApp({
 		res.json({ ...toUserDtoOut(user), uuAppErrorMap: unsupportedKeys(req, req.query, []) })
 	})
 		if (managerRequestDao) {
-		app.use(createManagerRequestRouter({ userDao, managerRequestDao, gatewaySecret, audit }))
+		app.use(createManagerRequestRouter({ userDao, managerRequestDao, gatewaySecret }))
 	}
 
 

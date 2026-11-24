@@ -32,6 +32,7 @@ const PUBLIC_ENDPOINTS = new Set([
 const MANAGER_ENDPOINTS = new Set([
   "POST /api/venue/create",
   "POST /api/venue/setActive",
+  "POST /api/venue/update",
   "GET /api/venue/listMine",
   "POST /api/venueImage/upload",
   "POST /api/court/create",
