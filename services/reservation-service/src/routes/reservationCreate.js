@@ -13,17 +13,18 @@ function parseInstant(value) {
 	return Number.isNaN(instant.getTime()) ? null : instant
 }
 
-function validateDtoIn(dtoIn) {
+// idKey: 'courtId' for create, 'id' (the reservation) for update.
+export function validateDtoIn(dtoIn, idKey = 'courtId') {
 	const missingKeyMap = {}
 	const invalidTypeKeyMap = {}
 	const invalidValueKeyMap = {}
 
-	if (dtoIn.courtId === undefined) {
-		missingKeyMap.courtId = 'courtId je povinný.'
-	} else if (typeof dtoIn.courtId !== 'string') {
-		invalidTypeKeyMap.courtId = 'courtId musí být řetězec.'
-	} else if (!UUID_PATTERN.test(dtoIn.courtId)) {
-		invalidValueKeyMap.courtId = 'courtId musí být platné UUID.'
+	if (dtoIn[idKey] === undefined) {
+		missingKeyMap[idKey] = `${idKey} je povinný.`
+	} else if (typeof dtoIn[idKey] !== 'string') {
+		invalidTypeKeyMap[idKey] = `${idKey} musí být řetězec.`
+	} else if (!UUID_PATTERN.test(dtoIn[idKey])) {
+		invalidValueKeyMap[idKey] = `${idKey} musí být platné UUID.`
 	}
 
 	for (const key of ['startAt', 'endAt']) {
@@ -57,7 +58,7 @@ function validateDtoIn(dtoIn) {
 	return { startAt, endAt }
 }
 
-function slotNotAvailable(courtId, startAt, endAt) {
+export function slotNotAvailable(courtId, startAt, endAt) {
 	return new AppError('slotNotAvailable', 'Termín už je obsazený.', 409, {
 		courtId,
 		startAt: startAt.toISOString(),
@@ -65,7 +66,7 @@ function slotNotAvailable(courtId, startAt, endAt) {
 	})
 }
 
-function isOverlapViolation(error) {
+export function isOverlapViolation(error) {
 	const text = [error?.code, error?.meta?.code, error?.cause?.code, error?.message].join(' ')
 	return text.includes('23P01') || text.includes('reservations_no_active_overlap')
 }
@@ -87,6 +88,76 @@ function priceInCents({ priceRuleList, startMinutes, endMinutes }) {
 	return total
 }
 
+// Checks a new slot on a court (future, venue active, opening hours, price list) and returns the court and price.
+export async function checkSlot({ db, courtId, startAt, endAt, now }) {
+	if (startAt <= now()) {
+		throw new AppError('reservationInPast', 'Termín už začal nebo je v minulosti.', 400, {
+			startAt: startAt.toISOString(),
+		})
+	}
+
+	const localStart = toPragueLocal(startAt)
+	const localEnd = toPragueLocal(endAt)
+	const startMinutes = localStart.minutes
+	const endMinutes = startMinutes + (endAt - startAt) / 60000
+
+	const court = await db.court.findUnique({
+		where: { id: courtId },
+		select: {
+			id: true,
+			name: true,
+			venueId: true,
+			venue: {
+				select: {
+					name: true,
+					deactivatedAt: true,
+					openingHours: {
+						where: { dayOfWeek: localStart.dayOfWeek },
+						select: { openTime: true, closeTime: true },
+					},
+				},
+			},
+			priceRules: {
+				where: { dayOfWeek: localStart.dayOfWeek },
+				select: { startTime: true, endTime: true, pricePerHour: true },
+			},
+		},
+	})
+
+	if (!court) {
+		throw new AppError('courtDoesNotExist', 'Kurt nenalezen.', 404, { courtId })
+	}
+
+	if (court.venue.deactivatedAt) {
+		throw new AppError('venueIsNotActive', 'Sportoviště je deaktivované a nepřijímá rezervace.', 409, {
+			venueId: court.venueId,
+		})
+	}
+
+	const hours = court.venue.openingHours[0]
+	const openMinutes = hours ? minutesOfTime(hours.openTime) : null
+	const closeMinutes = hours ? minutesOfTime(hours.closeTime) : null
+	const fitsOpeningHours =
+		hours &&
+		localStart.seconds === 0 &&
+		localEnd.date === localStart.date &&
+		localEnd.minutes === endMinutes &&
+		startMinutes >= openMinutes &&
+		endMinutes <= closeMinutes &&
+		(startMinutes - openMinutes) % SLOT_MINUTES === 0
+
+	if (!fitsOpeningHours) {
+		throw new AppError('outsideOpeningHours', 'Termín je mimo otevírací dobu sportoviště.', 400, {
+			date: localStart.date,
+			openTime: hours ? formatMinutes(openMinutes) : null,
+			closeTime: hours ? formatMinutes(closeMinutes) : null,
+		})
+	}
+
+	const totalCents = priceInCents({ priceRuleList: court.priceRules, startMinutes, endMinutes })
+	return { court, totalCents }
+}
+
 export function createReservationCreateRouter({ db, gatewaySecret = process.env.GATEWAY_SECRET, now = () => new Date() }) {
 	const router = Router()
 
@@ -100,72 +171,7 @@ export function createReservationCreateRouter({ db, gatewaySecret = process.env.
 
 		const { startAt, endAt } = validateDtoIn(dtoIn)
 		const { courtId } = dtoIn
-
-		if (startAt <= now()) {
-			throw new AppError('reservationInPast', 'Termín už začal nebo je v minulosti.', 400, {
-				startAt: startAt.toISOString(),
-			})
-		}
-
-		const localStart = toPragueLocal(startAt)
-		const localEnd = toPragueLocal(endAt)
-		const startMinutes = localStart.minutes
-		const endMinutes = startMinutes + (endAt - startAt) / 60000
-
-		const court = await db.court.findUnique({
-			where: { id: courtId },
-			select: {
-				id: true,
-				name: true,
-				venueId: true,
-				venue: {
-					select: {
-						name: true,
-						deactivatedAt: true,
-						openingHours: {
-							where: { dayOfWeek: localStart.dayOfWeek },
-							select: { openTime: true, closeTime: true },
-						},
-					},
-				},
-				priceRules: {
-					where: { dayOfWeek: localStart.dayOfWeek },
-					select: { startTime: true, endTime: true, pricePerHour: true },
-				},
-			},
-		})
-
-		if (!court) {
-			throw new AppError('courtDoesNotExist', 'Kurt nenalezen.', 404, { courtId })
-		}
-
-		if (court.venue.deactivatedAt) {
-			throw new AppError('venueIsNotActive', 'Sportoviště je deaktivované a nepřijímá rezervace.', 409, {
-				venueId: court.venueId,
-			})
-		}
-
-		const hours = court.venue.openingHours[0]
-		const openMinutes = hours ? minutesOfTime(hours.openTime) : null
-		const closeMinutes = hours ? minutesOfTime(hours.closeTime) : null
-		const fitsOpeningHours =
-			hours &&
-			localStart.seconds === 0 &&
-			localEnd.date === localStart.date &&
-			localEnd.minutes === endMinutes &&
-			startMinutes >= openMinutes &&
-			endMinutes <= closeMinutes &&
-			(startMinutes - openMinutes) % SLOT_MINUTES === 0
-
-		if (!fitsOpeningHours) {
-			throw new AppError('outsideOpeningHours', 'Termín je mimo otevírací dobu sportoviště.', 400, {
-				date: localStart.date,
-				openTime: hours ? formatMinutes(openMinutes) : null,
-				closeTime: hours ? formatMinutes(closeMinutes) : null,
-			})
-		}
-
-		const totalCents = priceInCents({ priceRuleList: court.priceRules, startMinutes, endMinutes })
+		const { court, totalCents } = await checkSlot({ db, courtId, startAt, endAt, now })
 
 		const player = await db.user.findUnique({ where: { id: playerId }, select: { name: true } })
 		if (!player) {
