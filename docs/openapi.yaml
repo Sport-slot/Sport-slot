@@ -191,6 +191,59 @@ paths:
                       uuAppErrorMap: { $ref: '#/components/schemas/UuAppErrorMap' }
         '401': { $ref: '#/components/responses/NotAuthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
+        
+  /api/managerRequest/approve:
+    post:
+      tags: [Auth]
+      summary: Administrátor schválí žádost o roli správce
+      description: |
+        Pouze pro roli ADMIN. Schválí čekající žádost
+        a přidá uživateli roli MANAGER.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                  description: ID žádosti o roli správce
+      responses:
+        '200':
+          description: Žádost schválena
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  userId: { type: string, format: uuid }
+                  message: { type: string, nullable: true }
+                  status: { type: string, enum: [APPROVED] }
+                  decidedById: { type: string, format: uuid }
+                  createdAt: { type: string, format: date-time }
+                  decidedAt: { type: string, format: date-time }
+                  uuAppErrorMap:
+                    $ref: '#/components/schemas/UuAppErrorMap'
+        '400': { $ref: '#/components/responses/InvalidDtoIn' }
+        '401': { $ref: '#/components/responses/NotAuthenticated' }
+        '403': { $ref: '#/components/responses/NotAuthorized' }
+        '404':
+          description: Žádost neexistuje (managerRequestDoesNotExist).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '409':
+          description: Žádost již byla vyřízena (managerRequestAlreadyDecided).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
   /api/venue/create:
     post:
       tags: [Venue]
@@ -270,7 +323,7 @@ paths:
                 type: object
                 properties:
                   id: { type: string, format: uuid }
-                  imageUrl: { type: string, example: /venueImage/get?id=8f14e45f-ceea-4e7a-9a1b-2f0c9d6e1a11 }
+                  imageUrl: { type: string, example: "/venueImage/get?id=8f14e45f-ceea-4e7a-9a1b-2f0c9d6e1a11" }
                   contentType: { type: string, enum: [image/jpeg, image/png, image/webp] }
                   size: { type: integer }
                   createdAt: { type: string, format: date-time }
