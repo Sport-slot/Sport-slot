@@ -36,6 +36,8 @@ const MANAGER_ENDPOINTS = new Set([
   "GET /api/venue/listMine",
   "POST /api/venueImage/upload",
   "POST /api/court/create",
+  "POST /api/court/update",
+  "POST /api/court/delete",
   "POST /api/priceRule/create",
 ]);
 
