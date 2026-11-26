@@ -762,6 +762,60 @@ paths:
         '401': { $ref: '#/components/responses/NotAuthenticated' }
         '403': { $ref: '#/components/responses/NotAuthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/reservation/update:
+    post:
+      tags: [Reservation]
+      summary: Hráč změní termín rezervace (US 9)
+      description: |
+        Jen vlastní aktivní rezervaci a nejpozději 24 hodin před původním začátkem. Kurt zůstává stejný. Nový termín se kontroluje
+        jako u `reservation/create` a cena se přepočítá z ceníku. Vlastní původní termín se do překryvu nepočítá.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, startAt, endAt]
+              properties:
+                id: { type: string, format: uuid }
+                startAt: { type: string, format: date-time, example: '2026-11-28T15:00:00Z' }
+                endAt: { type: string, format: date-time, example: '2026-11-28T16:00:00Z' }
+      responses:
+        '200':
+          description: Termín rezervace změněn
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  courtId: { type: string, format: uuid }
+                  courtName: { type: string }
+                  venueId: { type: string, format: uuid }
+                  venueName: { type: string }
+                  playerId: { type: string, format: uuid }
+                  playerName: { type: string }
+                  startAt: { type: string, format: date-time }
+                  endAt: { type: string, format: date-time }
+                  totalPrice: { type: number, example: 500 }
+                  status: { type: string, enum: [ACTIVE] }
+                  createdAt: { type: string, format: date-time }
+                  uuAppErrorMap: { $ref: '#/components/schemas/UuAppErrorMap' }
+        '400':
+          description: Neplatný vstup (`invalidDtoIn`), méně než 24 hodin do původního začátku (`changeTooLate`), termín v minulosti (`reservationInPast`), mimo otevírací dobu (`outsideOpeningHours`) nebo bez ceny (`priceNotSet`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401': { $ref: '#/components/responses/NotAuthenticated' }
+        '403': { $ref: '#/components/responses/NotAuthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Rezervace je zrušená (`reservationNotActive`), termín je obsazený (`slotNotAvailable`) nebo sportoviště je deaktivované (`venueIsNotActive`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /api/reservation/listMy:
     get:
       tags: [Reservation]
