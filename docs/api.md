@@ -291,7 +291,7 @@ Endpointy zajišťuje `reservation-service`.
 * **dtoIn (query):** `period` (nepovinné, `upcoming` nebo `past`), `pageIndex` (výchozí 0), `pageSize` (výchozí 20, nejvýše 100).
 * **dtoOut:** `itemList: [{ id, courtId, courtName, venueId, venueName, playerId, playerName, startAt, endAt, totalPrice, status, createdAt, cancelledAt }]`, `pageInfo: { pageIndex, pageSize, total }`.
 * **Pravidla:**
-  * `period=upcoming` vrací jen aktivní (`ACTIVE`) rezervace, které ještě neskončily (`endAt` je v budoucnosti), od nejbližší. Zrušené se nevrací, jejich termín je znovu volný.
+  * `period=upcoming` vrací rezervace, které ještě neskončily (`endAt` je v budoucnosti), od nejbližší. Zrušené mezi nimi zůstávají se stavem `CANCELLED` a časem zrušení, aby hráč viděl, že termín zrušil; jejich slot je pro ostatní znovu volný.
   * `period=past` vrací rezervace, které už skončily, od nejnovější. Zrušené mezi nimi jsou se stavem `CANCELLED` a časem zrušení.
   * Bez `period` se vrací všechny rezervace hráče, nejnovější první.
   * Stav `odehraná` samostatně neexistuje: je to aktivní rezervace, jejíž `endAt` už uplynul.

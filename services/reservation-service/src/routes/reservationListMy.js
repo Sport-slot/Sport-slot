@@ -82,7 +82,7 @@ export function createReservationListMyRouter({ db, gatewaySecret = process.env.
 
 		const current = now()
 		const where = { playerId }
-		if (period === 'upcoming') Object.assign(where, { status: 'ACTIVE', endAt: { gt: current } })
+		if (period === 'upcoming') where.endAt = { gt: current }
 		if (period === 'past') where.endAt = { lte: current }
 
 		const direction = period === 'upcoming' ? 'asc' : 'desc'

@@ -81,7 +81,7 @@ test('GET /reservation/listMy with period=upcoming filters by end time and sorts
 	const response = await listMy(db, { period: 'upcoming' })
 
 	assert.equal(response.status, 200)
-	assert.deepEqual(db.calls.findMany[0].where, { playerId: PLAYER_ID, status: 'ACTIVE', endAt: { gt: NOW } })
+	assert.deepEqual(db.calls.findMany[0].where, { playerId: PLAYER_ID, endAt: { gt: NOW } })
 	assert.equal(db.calls.findMany[0].orderBy[0].startAt, 'asc')
 })
 

@@ -767,7 +767,7 @@ paths:
       tags: [Reservation]
       summary: Hráč zobrazí své rezervace (US 10)
       description: |
-        Pro přihlášeného hráče, vrací jen jeho rezervace. `period=upcoming` vrací aktivní rezervace, které ještě neskončily (od nejbližší),
+        Pro přihlášeného hráče, vrací jen jeho rezervace. `period=upcoming` vrací rezervace, které ještě neskončily, včetně zrušených (od nejbližší),
         `period=past` skončené rezervace včetně zrušených (od nejnovější). Bez `period` se vrací všechny, nejnovější první.
       security:
         - bearerAuth: []
