@@ -285,6 +285,18 @@ Endpointy zajišťuje `reservation-service`.
 * **Chyby:** `reservation/cancel/invalidDtoIn` (400), `reservation/cancel/cancellationTooLate` (400, `paramMap`: `startAt, cancellableUntil`), `reservation/cancel/notAuthenticated` (401), `reservation/cancel/notAuthorized` (403, cizí rezervace), `reservation/cancel/reservationDoesNotExist` (404), varování `reservation/cancel/unsupportedKeys`.
 
 
+### `GET reservation/listMy`
+* **Popis:** Hráč zobrazí své rezervace, nadcházející i minulé (US 10).
+* **Práva:** Přihlášený hráč (role `PLAYER`), vrací jen vlastní rezervace.
+* **dtoIn (query):** `period` (nepovinné, `upcoming` nebo `past`), `pageIndex` (výchozí 0), `pageSize` (výchozí 20, nejvýše 100).
+* **dtoOut:** `itemList: [{ id, courtId, courtName, venueId, venueName, playerId, playerName, startAt, endAt, totalPrice, status, createdAt, cancelledAt }]`, `pageInfo: { pageIndex, pageSize, total }`.
+* **Pravidla:**
+  * `period=upcoming` vrací rezervace, které ještě neskončily (`endAt` je v budoucnosti), od nejbližší. Zrušené mezi nimi zůstávají se stavem `CANCELLED` a časem zrušení, aby hráč viděl, že termín zrušil; jejich slot je pro ostatní znovu volný.
+  * `period=past` vrací rezervace, které už skončily, od nejnovější. Zrušené mezi nimi jsou se stavem `CANCELLED` a časem zrušení.
+  * Bez `period` se vrací všechny rezervace hráče, nejnovější první.
+  * Stav `odehraná` samostatně neexistuje: je to aktivní rezervace, jejíž `endAt` už uplynul.
+* **Chyby:** `reservation/listMy/invalidDtoIn` (400), `reservation/listMy/notAuthenticated` (401), `reservation/listMy/notAuthorized` (403), varování `reservation/listMy/unsupportedKeys`.
+
 ## 7. Žádosti o roli správce (ManagerRequest)
 
 Zajišťuje `auth-service`. Hráč požádá o roli správce a administrátor žádost schválí nebo zamítne. Všechny endpointy vyžadují JWT. Role se kontrolují v `auth-service` podle databáze.
