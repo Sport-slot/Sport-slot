@@ -6,7 +6,8 @@
     "postinstall": "prisma generate --config prisma7.config.ts",
     "seed": "prisma db execute --file prisma/seed.sql",
     "generate": "prisma generate --config prisma7.config.ts",
-    "seed:demo": "prisma db execute --config prisma7.config.ts --file prisma/seed-demo.sql"
+    "seed:demo": "prisma db execute --config prisma7.config.ts --file prisma/seed-demo.sql",
+    "seed:activity": "prisma db execute --config prisma7.config.ts --file prisma/seed-demo-activity.sql"
   },
   "dependencies": {
     "@prisma/client": "^7.10.1",

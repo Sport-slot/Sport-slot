@@ -209,6 +209,27 @@ npm run seed:demo --workspace @sportslot/db
 
 Applied to the shared Supabase database on 7 November 2026 (Daniel Kolář, agreed in the team).
 
+### Demo activity
+
+`db/prisma/seed-demo-activity.sql` adds activity on top of the two seeds above, so the demo has something to show:
+
+| What | Fixed IDs | Data |
+|---|---|---|
+| 5 demo players | `…000000000011`–`…000000000015` | role `PLAYER`, placeholder Google IDs and `@sportslot.test` e-mails (they cannot log in) |
+| 22 reservations | `…000000401001`–`…000000401022` | 10 past and 12 upcoming across Sportcentrum and the demo venues, 2 of them `CANCELLED`; Sportcentrum Hřiště 1 and 2 are taken tomorrow at 17:00 and 18:00 |
+| 7 reviews | `…000000501001`–`…000000501007` | on past active reservations, ratings 3–5 |
+| 2 manager requests | `…000000601001`–`…000000601002` | `PENDING`, for `managerRequest/approve` |
+
+- Dates are relative to the day it runs (Prague time), so run it shortly before a presentation. Because of the fixed IDs, a later run adds nothing and does not move existing rows.
+- Each reservation is checked like `reservation/create`: within opening hours, on an hourly slot, priced from the one price rule that covers it. A reservation that would overlap a real active one is skipped.
+- It writes nothing to the audit log, because audit rows can never be deleted.
+- Only Alexandr runs it on the shared database.
+
+```bash
+npm exec --workspace @sportslot/db -- prisma migrate status --config prisma7.config.ts
+npm run seed:activity --workspace @sportslot/db
+```
+
 ## 8. Security and collaboration
 
 - Keep database credentials outside Git.
