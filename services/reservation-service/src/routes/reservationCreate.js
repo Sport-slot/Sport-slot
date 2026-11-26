@@ -13,7 +13,6 @@ function parseInstant(value) {
 	return Number.isNaN(instant.getTime()) ? null : instant
 }
 
-// idKey: 'courtId' for create, 'id' (the reservation) for update.
 export function validateDtoIn(dtoIn, idKey = 'courtId') {
 	const missingKeyMap = {}
 	const invalidTypeKeyMap = {}
@@ -88,7 +87,6 @@ function priceInCents({ priceRuleList, startMinutes, endMinutes }) {
 	return total
 }
 
-// Checks a new slot on a court (future, venue active, opening hours, price list) and returns the court and price.
 export async function checkSlot({ db, courtId, startAt, endAt, now }) {
 	if (startAt <= now()) {
 		throw new AppError('reservationInPast', 'Termín už začal nebo je v minulosti.', 400, {

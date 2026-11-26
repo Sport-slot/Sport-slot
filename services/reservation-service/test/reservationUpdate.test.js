@@ -12,7 +12,6 @@ const COURT_ID = '00000000-0000-4000-8000-000000000201'
 const VENUE_ID = '00000000-0000-4000-8000-000000000101'
 const NOW = new Date('2026-11-20T08:00:00Z')
 
-// Prague is UTC+1 in November: 15:00Z = 16:00 local, the 500 Kč/h peak rate.
 const newSlot = { id: RESERVATION_ID, startAt: '2026-11-26T15:00:00Z', endAt: '2026-11-26T17:00:00Z' }
 
 function time(value) {

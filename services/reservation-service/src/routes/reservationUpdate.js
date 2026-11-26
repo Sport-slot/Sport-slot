@@ -4,7 +4,6 @@ import { playerIdFromGateway } from '../gatewayAuth.js'
 import { checkSlot, isOverlapViolation, slotNotAvailable, validateDtoIn } from './reservationCreate.js'
 
 const ALLOWED_KEYS = ['id', 'startAt', 'endAt']
-// Same deadline as reservation/cancel, otherwise moving the booking would get around it.
 const CHANGE_DEADLINE_MS = 24 * 60 * 60 * 1000
 
 function reservationNotActive(id) {
@@ -58,7 +57,6 @@ export function createReservationUpdateRouter({ db, gatewaySecret = process.env.
 		let updated
 		try {
 			updated = await db.$transaction(async (tx) => {
-				// status in the filter: a cancel that lands in between must win.
 				const { count } = await tx.reservation.updateMany({
 					where: { id, status: 'ACTIVE' },
 					data: { startAt, endAt, totalPrice: (totalCents / 100).toFixed(2) },

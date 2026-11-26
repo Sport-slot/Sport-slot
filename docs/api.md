@@ -284,6 +284,18 @@ Endpointy zajišťuje `reservation-service`.
   * Zrušení a záznam do audit logu (`reservation/cancel`) se uloží v jednom zápisu.
 * **Chyby:** `reservation/cancel/invalidDtoIn` (400), `reservation/cancel/cancellationTooLate` (400, `paramMap`: `startAt, cancellableUntil`), `reservation/cancel/notAuthenticated` (401), `reservation/cancel/notAuthorized` (403, cizí rezervace), `reservation/cancel/reservationDoesNotExist` (404), varování `reservation/cancel/unsupportedKeys`.
 
+### `POST reservation/update`
+* **Popis:** Hráč změní termín své rezervace (US 9).
+* **Práva:** Přihlášený hráč (role `PLAYER`), jen vlastní rezervaci.
+* **dtoIn (JSON):** `id` (UUID rezervace), `startAt`, `endAt` (ISO 8601 s časovou zónou). Kurt zůstává stejný.
+* **dtoOut:** `id, courtId, courtName, venueId, venueName, playerId, playerName, startAt, endAt, totalPrice, status` (`ACTIVE`), `createdAt`.
+* **Pravidla:**
+  * Změnit lze jen aktivní (`ACTIVE`) rezervaci, nejpozději 24 hodin před jejím **původním** začátkem (stejně jako `reservation/cancel`).
+  * Nový termín se kontroluje stejně jako u `reservation/create`: v budoucnosti, aktivní sportoviště, otevírací doba, celé hodiny od otevření, cena z ceníku.
+  * Cena se přepočítá podle ceníku. Vlastní původní termín se do překryvu nepočítá, jde tedy posunout i o hodinu.
+  * Změna a záznam do audit logu (`reservation/update`, v `details` původní i nový termín a cena) se uloží v jednom zápisu. Když mezitím proběhne zrušení, změna neprojde.
+* **Chyby:** `reservation/update/invalidDtoIn` (400), `reservation/update/changeTooLate` (400, `paramMap`: `startAt, changeableUntil`), `reservation/update/reservationInPast` (400), `reservation/update/outsideOpeningHours` (400), `reservation/update/priceNotSet` (400), `reservation/update/notAuthenticated` (401), `reservation/update/notAuthorized` (403, cizí rezervace), `reservation/update/reservationDoesNotExist` (404), `reservation/update/courtDoesNotExist` (404), `reservation/update/reservationNotActive` (409), `reservation/update/venueIsNotActive` (409), `reservation/update/slotNotAvailable` (409), varování `reservation/update/unsupportedKeys`.
+
 
 ## 7. Žádosti o roli správce (ManagerRequest)
 
