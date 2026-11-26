@@ -177,7 +177,7 @@ async function listMyReservationsMock(
   const matching =
     period === "upcoming"
       ? mockReservations
-          .filter((r) => r.status === "ACTIVE" && new Date(r.endAt).getTime() > now)
+          .filter((r) => new Date(r.endAt).getTime() > now)
           .sort((a, b) => a.startAt.localeCompare(b.startAt))
       : mockReservations
           .filter((r) => new Date(r.endAt).getTime() <= now)

@@ -77,4 +77,4 @@ Stránka je na `/reservations` (jen role `PLAYER`, odkaz „Moje rezervace“ je
 
 S nastaveným `NEXT_PUBLIC_MOCK_ROLE` místo API použije mock: pět rezervací v paměti prohlížeče vztažených k aktuálnímu času (za 3 dny, za 10 hodin = už nejde zrušit, včerejší odehraná, zrušená před týdnem a zrušená budoucí), stejné filtrování a řazení jako backend a stejná chyba `cancellationTooLate` (400).
 
-`reservation/listMy` je zatím jen v PR #55, do jeho mergnutí vrací skutečné API na této stránce chybu. Známá mezera backendu: zrušená rezervace v budoucnosti není ani v `upcoming` (jen aktivní), ani v `past` (jen skončené), takže po obnovení stránky zmizí.
+Zrušená rezervace, která ještě neskončila, zůstává v záložce „Nadcházející“ s označením „Zrušeno“, i po obnovení stránky.

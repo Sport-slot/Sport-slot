@@ -54,7 +54,6 @@ export function MyReservations() {
     };
   }, [period, attempt]);
 
-  // The cancel button disappears with its dialog, so focus moves to the confirmation instead of the page start.
   useEffect(() => {
     if (focusCancelledId) document.getElementById(`reservation-cancelled-${focusCancelledId}`)?.focus();
   }, [focusCancelledId]);
@@ -64,7 +63,6 @@ export function MyReservations() {
     const requestPeriod = state.period;
     const nextIndex = state.pageIndex + 1;
     setState({ ...state, loadingMore: true, moreError: null });
-    // A tab switch while this request runs must not mix the old tab's page into the new list.
     const isSameList = (current: LoadState): current is Extract<LoadState, { status: "done" }> =>
       current.status === "done" && current.period === requestPeriod;
     try {
