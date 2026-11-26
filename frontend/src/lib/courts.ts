@@ -32,6 +32,44 @@ export async function createCourt(dtoIn: CourtCreateDtoIn): Promise<CreatedCourt
   return (await response.json()) as CreatedCourt;
 }
 
+export async function updateCourt(dtoIn: {
+  id: string;
+  name: string;
+  sport: string;
+  surface: string;
+  indoor: boolean; }): Promise<Court> {
+    const response = await fetch(`${apiBaseUrl}/court/update`, 
+      {
+        method: "POST",
+        headers: { "Content-Type" : "application/json",
+        ...authHeaders() },
+        body: JSON.stringify(dtoIn),
+      });
+      if (!response.ok) {
+        throw await toApiError(response);
+      }
+      return (await response.json()) as Court; 
+  
+}
+
+export async function deleteCourt(id: string): Promise<void> {
+  const response = await fetch(`${apiBaseUrl}/court/delete`, {
+
+    method: "POST",
+    headers: {"Content-Type": "application/json", 
+      ...authHeaders() },
+    
+    body: JSON.stringify({id}),
+  
+  });
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+  
+}
+
+
+
 export type CourtSlot = {
   startTime: string;
   endTime: string;

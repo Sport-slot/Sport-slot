@@ -816,6 +816,68 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /api/reservation/listMy:
+    get:
+      tags: [Reservation]
+      summary: Hráč zobrazí své rezervace (US 10)
+      description: |
+        Pro přihlášeného hráče, vrací jen jeho rezervace. `period=upcoming` vrací rezervace, které ještě neskončily, včetně zrušených (od nejbližší),
+        `period=past` skončené rezervace včetně zrušených (od nejnovější). Bez `period` se vrací všechny, nejnovější první.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema: { type: string, enum: [upcoming, past] }
+        - name: pageIndex
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: pageSize
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Stránka rezervací hráče
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  itemList:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        courtId: { type: string, format: uuid }
+                        courtName: { type: string, nullable: true }
+                        venueId: { type: string, format: uuid }
+                        venueName: { type: string, nullable: true }
+                        playerId: { type: string, format: uuid }
+                        playerName: { type: string }
+                        startAt: { type: string, format: date-time }
+                        endAt: { type: string, format: date-time }
+                        totalPrice: { type: number, example: 300 }
+                        status: { type: string, enum: [ACTIVE, CANCELLED] }
+                        createdAt: { type: string, format: date-time }
+                        cancelledAt: { type: string, format: date-time, nullable: true }
+                  pageInfo:
+                    type: object
+                    properties:
+                      pageIndex: { type: integer }
+                      pageSize: { type: integer }
+                      total: { type: integer }
+                  uuAppErrorMap: { $ref: '#/components/schemas/UuAppErrorMap' }
+        '400':
+          description: Neplatný vstup (`invalidDtoIn`), např. `pageSize` mimo 1–100 nebo neznámé `period`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401': { $ref: '#/components/responses/NotAuthenticated' }
+        '403': { $ref: '#/components/responses/NotAuthorized' }
   /api/priceRule/create:
     post:
       tags: [PriceRule]

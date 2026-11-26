@@ -339,3 +339,179 @@ test("POST /court/create returns 409 for duplicate court name", async () => {
 
   assert.equal(response.status, 409);
 });
+
+const UPDATE_DTO = {
+  id: COURT_ID,
+  name: "Upravené hřiště",
+  sport: "tenis",
+  surface: "antuka",
+  indoor: true,
+};
+
+test("POST /court/update updates a court for its manager", async () => {
+  const db = {
+    $transaction: async (callback) => callback(db),
+
+    court: {
+      findUnique: async () => ({
+        id: COURT_ID,
+        name: "Původní hřiště",
+        sport: "volejbal",
+        surface: "beton",
+        indoor: false,
+        venue: {
+          managerId: MANAGER_ID,
+        },
+      }),
+
+      update: async ({ data }) => ({
+        id: COURT_ID,
+        ...data,
+      }),
+    },
+
+    auditLog: {
+      create: async () => {},
+    },
+  };
+
+  const response = await managerHeaders(
+    request(createAuthorizedApp(db)).post("/court/update"),
+  ).send(UPDATE_DTO);
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.id, COURT_ID);
+  assert.equal(response.body.name, "Upravené hřiště");
+  assert.equal(response.body.sport, "tenis");
+});
+
+
+test("POST /court/update rejects missing id", async () => {
+  const response = await managerHeaders(
+    request(createAuthorizedApp({})).post("/court/update"),
+  ).send({
+    name: "New name",
+  });
+
+  assert.equal(response.status, 400);
+
+  assert.ok(
+    response.body.uuAppErrorMap["court/update/invalidDtoIn"],
+  );
+});
+
+
+test("POST /court/update rejects manager who does not own the court", async () => {
+  const db = {
+    court: {
+      findUnique: async () => ({
+        id: COURT_ID,
+        venue: {
+          managerId: "10000000-0000-4000-8000-000000000099",
+        },
+      }),
+    },
+  };
+
+  const response = await managerHeaders(
+    request(createAuthorizedApp(db)).post("/court/update"),
+  ).send(UPDATE_DTO);
+
+  assert.equal(response.status, 403);
+});
+
+
+const DELETE_DTO = {
+  id: COURT_ID,
+};
+
+
+test("POST /court/delete deletes a court for its manager", async () => {
+  let deletedCourt = false;
+  let deletedPriceRules = false;
+  let createdAudit = false;
+
+  const db = {
+    $transaction: async (callback) => callback(db),
+
+    court: {
+      findUnique: async () => ({
+        id: COURT_ID,
+        name: "Court 1",
+        sport: "tenis",
+        venueId: VENUE_ID,
+        venue: {
+          managerId: MANAGER_ID,
+        },
+      }),
+
+      delete: async () => {
+        deletedCourt = true;
+      },
+    },
+
+    priceRule: {
+      deleteMany: async () => {
+        deletedPriceRules = true;
+
+        return {
+          count: 2,
+        };
+      },
+    },
+
+    auditLog: {
+      create: async () => {
+        createdAudit = true;
+      },
+    },
+  };
+
+  const response = await managerHeaders(
+    request(createAuthorizedApp(db)).post("/court/delete"),
+  ).send(DELETE_DTO);
+
+  assert.equal(response.status, 200);
+
+  assert.equal(response.body.id, COURT_ID);
+  assert.equal(response.body.deleted, true);
+
+  assert.equal(deletedPriceRules, true);
+  assert.equal(deletedCourt, true);
+  assert.equal(createdAudit, true);
+});
+
+
+test("POST /court/delete returns 404 for unknown court", async () => {
+  const db = {
+    court: {
+      findUnique: async () => null,
+    },
+  };
+
+  const response = await managerHeaders(
+    request(createAuthorizedApp(db)).post("/court/delete"),
+  ).send(DELETE_DTO);
+
+  assert.equal(response.status, 404);
+});
+
+
+test("POST /court/delete rejects manager who does not own the court", async () => {
+  const db = {
+    court: {
+      findUnique: async () => ({
+        id: COURT_ID,
+        venue: {
+          managerId: "10000000-0000-4000-8000-000000000099",
+        },
+      }),
+    },
+  };
+
+  const response = await managerHeaders(
+    request(createAuthorizedApp(db)).post("/court/delete"),
+  ).send(DELETE_DTO);
+
+  assert.equal(response.status, 403);
+});

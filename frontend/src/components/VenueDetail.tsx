@@ -27,6 +27,9 @@ import { FreeSlots } from "@/components/FreeSlots";
 import { capitalize, imageForSports } from "@/lib/venueVisuals";
 import { getVenue, type Court, type VenueDetail as Venue } from "@/lib/venues";
 import { DeactivatedNotice, VenueActivationButton } from "@/components/VenueManagement";
+import { updateCourt, deleteCourt, courtLimits } from "@/lib/courts";
+import { SportPicker } from "@/components/court-form/SportPicker";
+import { on } from "node:events";
 
 type LoadState =
   | { status: "loading" }
@@ -159,7 +162,11 @@ export function VenueDetail({ id, backHref = "/venues", initialVenue }: { id: st
           key={state.venue.id}
           venue={state.venue}
           backHref={backHref}
-          onChange={(patch) => setState({ status: "done", venue: { ...state.venue, ...patch } })}
+          onChange={(patch) => setState({ status: "done", venue: { ...state.venue, ...patch }, })}
+          onCourtsChange={(courts) => setState({
+            status: "done",
+            venue: {...state.venue, courts},
+          })}
         />
       </main>
     );
@@ -319,10 +326,11 @@ function ShareVenue({ className }: { className: string }) {
   );
 }
 
-function VenueContent({ venue, backHref, onChange }: {
+function VenueContent({ venue, backHref, onChange, onCourtsChange, }: {
   venue: Venue;
   backHref: string;
   onChange: (patch: Pick<Venue, "active" | "deactivatedAt">) => void;
+  onCourtsChange: (courts: Court[]) => void;
 }) {
   const [selectedSport, setSelectedSport] = useState("");
   const now = usePragueNow();
@@ -374,7 +382,15 @@ function VenueContent({ venue, backHref, onChange }: {
               </div>
               <ul id="venue-court-list" className="mt-8 border-t border-line md:mt-0 md:border-t-0">
                 {courts.map((court) => (
-                  <CourtRow key={court.id} court={court} number={venue.courts.indexOf(court) + 1} highlight={selectedSport} pricingHref={venue.isOwner ? `/venues/${venue.id}/courts/${court.id}/prices` : undefined} />
+                  <CourtRow key={court.id} court={court} number={venue.courts.indexOf(court) + 1} highlight={selectedSport} pricingHref={venue.isOwner ? `/venues/${venue.id}/courts/${court.id}/prices` : undefined}
+                  onUpdate={(updatedCourt) => onCourtsChange(
+                    venue.courts.map((item) => item.id === updatedCourt.id ? updatedCourt : item)
+                  )}
+                  onDelete={(courtId) => onCourtsChange(
+                    venue.courts.filter((item) => item.id !== courtId)
+                  )}
+                  
+                  />
                 ))}
               </ul>
             </>
@@ -453,38 +469,273 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 }
 
 const courtColumns = "md:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1.3fr)_7rem]";
-const ownerCourtColumns = "md:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_6rem_8.5rem]";
+const ownerCourtColumns = "md:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_6rem_12rem]";
 
-function CourtRow({ court, number, highlight, pricingHref }: { court: Court; number: number; highlight: string; pricingHref?: string }) {
+
+function CourtRow({
+  court,
+  number,
+  highlight,
+  pricingHref,
+  onUpdate,
+  onDelete,
+}: {
+  court: Court;
+  number: number;
+  highlight: string;
+  pricingHref?: string;
+  onUpdate: (court: Court) => void;
+  onDelete: (id: string) => void;
+}) {
   const sports = courtSports(court);
+
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(court.name);
+  const [selectedSports, setSelectedSports] = useState<string[]>(sports);
+  const [surface, setSurface] = useState(court.surface);
+  const [indoor, setIndoor] = useState(court.indoor);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  function startEditing() {
+    setName(court.name);
+    setSelectedSports(courtSports(court));
+    setSurface(court.surface);
+    setIndoor(court.indoor);
+    setError("");
+    setEditing(true);
+  }
+
+  async function saveCourt() {
+    if (!name.trim()) {
+      setError("Zadejte název kurtu.");
+      return;
+    }
+
+    if (selectedSports.length === 0) {
+      setError("Vyberte alespoň jeden sport.");
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+
+    try {
+      const updatedCourt = await updateCourt({
+        id: court.id,
+        name: name.trim(),
+        sport: selectedSports.join(", "),
+        surface: surface.trim(),
+        indoor,
+      });
+
+      onUpdate(updatedCourt);
+      setEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kurt se nepodařilo upravit.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeCourt() {
+    const confirmed = window.confirm(
+      `Opravdu chcete smazat kurt "${court.name}"?`
+    );
+
+    if (!confirmed) return;
+
+    setBusy(true);
+    setError("");
+
+    try {
+      await deleteCourt(court.id);
+      onDelete(court.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kurt se nepodařilo smazat.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <li className="border-b border-line py-6 md:py-7">
+        <div className="max-w-2xl space-y-6">
+          <div>
+            <h3 className="font-display text-xl font-semibold">
+              Upravit kurt
+            </h3>
+            <p className="mt-1 text-sm text-muted">
+              Změňte údaje o kurtu a uložte je.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor={`court-name-${court.id}`} className="mb-2 block text-sm font-semibold">
+              Název kurtu
+            </label>
+            <input
+              id={`court-name-${court.id}`}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              maxLength={courtLimits.name}
+              className="form-input w-full"
+              required
+            />
+          </div>
+
+          <SportPicker
+            value={selectedSports}
+            onChange={setSelectedSports}
+            maxLength={courtLimits.sport}
+          />
+
+          <div>
+            <label htmlFor={`court-surface-${court.id}`} className="mb-2 block text-sm font-semibold">
+              Povrch
+            </label>
+            <input
+              id={`court-surface-${court.id}`}
+              value={surface}
+              onChange={(event) => setSurface(event.target.value)}
+              maxLength={courtLimits.surface}
+              className="form-input w-full"
+            />
+          </div>
+
+          <fieldset>
+            <legend className="mb-3 text-sm font-semibold">
+              Prostředí
+            </legend>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setIndoor(false)}
+                aria-pressed={!indoor}
+                className={`rounded-full border px-5 py-3 text-sm font-medium ${
+                  !indoor
+                    ? "border-foreground bg-foreground text-page"
+                    : "border-line"
+                }`}
+              >
+                Venku
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIndoor(true)}
+                aria-pressed={indoor}
+                className={`rounded-full border px-5 py-3 text-sm font-medium ${
+                  indoor
+                    ? "border-foreground bg-foreground text-page"
+                    : "border-line"
+                }`}
+              >
+                V hale
+              </button>
+            </div>
+          </fieldset>
+
+          {error && (
+            <p role="alert" className="text-sm text-red-600">
+              {error}
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void saveCourt()}
+              disabled={busy}
+              className="button button-dark min-h-11 px-5"
+            >
+              {busy ? "Ukládám..." : "Uložit změny"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(false);
+                setError("");
+              }}
+              disabled={busy}
+              className="button button-outline min-h-11 px-5"
+            >
+              Zrušit
+            </button>
+          </div>
+        </div>
+      </li>
+    );
+  }
 
   return (
     <li className={`grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 border-b border-line py-6 md:items-baseline md:gap-8 md:py-7 ${pricingHref ? ownerCourtColumns : courtColumns}`}>
-      <span aria-hidden="true" className="font-display text-sm font-semibold text-muted tabular-nums md:text-base">{String(number).padStart(2, "0")}</span>
-      <h3 className="font-display text-xl leading-snug font-semibold tracking-[-.02em] [overflow-wrap:anywhere] md:text-2xl">{court.name}</h3>
+      <span aria-hidden="true" className="font-display text-sm font-semibold text-muted tabular-nums md:text-base">
+        {String(number).padStart(2, "0")}
+      </span>
+
+      <h3 className="font-display text-xl leading-snug font-semibold tracking-[-.02em] [overflow-wrap:anywhere] md:text-2xl">
+        {court.name}
+      </h3>
+
       <p className="col-start-2 text-[15px] leading-6 md:col-start-auto [overflow-wrap:anywhere]">
         {sports.map((sport, index) => (
           <span key={sport}>
             {index > 0 && <span aria-hidden="true" className="text-muted"> · </span>}
-            <span className={sport === highlight ? "rounded bg-ball px-1 font-semibold text-brand-900" : ""}>{capitalize(sport)}</span>
+            <span className={sport === highlight ? "rounded bg-ball px-1 font-semibold text-brand-900" : ""}>
+              {capitalize(sport)}
+            </span>
           </span>
         ))}
       </p>
+
       <p className="col-start-2 text-sm leading-6 text-pretty text-muted md:col-start-auto md:text-[15px] [overflow-wrap:anywhere]">
-        <span className="sr-only">Povrch: </span>{court.surface || "Povrch neuveden"}
+        <span className="sr-only">Povrch: </span>
+        {court.surface || "Povrch neuveden"}
       </p>
+
       <p className="col-start-2 mt-1 inline-flex items-center gap-1.5 text-sm text-muted md:col-start-auto md:mt-0 md:text-[15px]">
         {court.indoor ? <House size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
         {court.indoor ? "V hale" : "Venku"}
       </p>
+
       {pricingHref && (
-        <Link href={pricingHref} aria-label={`Ceník kurtu ${court.name}`} className="col-start-2 mt-3 inline-flex min-h-10 items-center gap-1.5 justify-self-start rounded-full border border-line px-3.5 text-sm font-semibold transition-colors hover:border-foreground md:col-start-auto md:mt-0 md:justify-self-end md:self-center">
-          <CurrencyCircleDollar size={17} aria-hidden="true" /> Ceník
-        </Link>
+        <div className="col-start-2 mt-3 flex flex-wrap items-center gap-2 md:col-start-auto md:mt-0 md:justify-self-end md:self-center">
+          <Link
+            href={pricingHref}
+            aria-label={`Ceník kurtu ${court.name}`}
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-semibold transition-colors hover:border-foreground"
+          >
+            <CurrencyCircleDollar size={17} aria-hidden="true" />
+            Ceník
+          </Link>
+
+          <button
+            type="button"
+            onClick={startEditing}
+            disabled={busy}
+            className="min-h-10 rounded-full border border-line px-3.5 text-sm font-semibold transition-colors hover:border-foreground disabled:opacity-50"
+          >
+            Upravit
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void removeCourt()}
+            disabled={busy}
+            className="min-h-10 rounded-full border border-line px-3.5 text-sm font-semibold text-red-600 transition-colors hover:border-red-600 disabled:opacity-50"
+          >
+            Smazat
+          </button>
+        </div>
       )}
     </li>
   );
 }
+
 
 function OpeningHours({ venue, now }: { venue: Venue; now: PragueNow | null }) {
   const hoursByDay = new Map(venue.openingHours.map((hours) => [hours.dayOfWeek, hours]));

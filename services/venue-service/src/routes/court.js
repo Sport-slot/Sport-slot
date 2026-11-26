@@ -6,6 +6,7 @@ import {
   notAuthenticated,
   notAuthorized,
 } from "@sportslot/api-format";
+import { managerIdFromGateway } from "../gatewayAuth.js";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -136,6 +137,8 @@ router.post("/create", async (req, res) => {
       503,
     );
   }
+
+  
 
   if (req.get("x-gateway-secret") !== gatewaySecret) {
     throw notAuthenticated();
@@ -287,6 +290,152 @@ router.post("/create", async (req, res) => {
     uuAppErrorMap: unsupportedKeys(req, dtoIn, requiredKeys),
   });
 });
+
+router.post("/update", async (req, res) => {
+  const managerId = managerIdFromGateway(req, gatewaySecret);
+  const { id, name, sport, surface, indoor } = req.body;
+  if (!id) {
+    throw invalidDtoIn({
+      missingKeyMap: {
+        id: "id je povinny"
+      }
+    })
+  }
+  const court = await db.court.findUnique({
+    where: {id},
+    include: {
+      venue: true,
+    },
+  });
+  if (!court) {
+    throw new AppError(
+            "courtDoesNotExist",
+            "Kurt nenalezen.",
+            404,
+            { id }
+
+    );
+  }
+  if (court.venue.managerId !== managerId) {
+    throw notAuthorized();
+  }
+  const data = {
+    ...(name !== undefined && { name }),
+    ...(sport !== undefined && { sport }),
+    ...(surface !== undefined && { surface }),
+    ...(indoor !== undefined && { indoor }),
+  };
+
+    const updated = await db.$transaction(async (tx) => {
+    const result = await tx.court.update({
+      where: { id },
+      data,
+    });
+
+     await tx.auditLog.create({
+      data: {
+        userId: managerId,
+        action: "court/update",
+        entityType: "Court",
+        entityId: id,
+        details: {
+          before: {
+            name: court.name,
+            sport: court.sport,
+            surface: court.surface,
+            indoor: court.indoor,
+          },
+          after: data,
+        },
+      },
+
+    });
+    return result; 
+  });
+
+  res.json(updated);
+
+
+});
+
+router.post("/delete", async (req, res) => {
+  const managerId = managerIdFromGateway(req, gatewaySecret);
+  const { id } = req.body;
+  if (!id) {
+  throw invalidDtoIn({
+    missingKeyMap: {
+      id: "id je povinný."
+    }
+  });
+}
+if (typeof id !== "string" || !UUID_PATTERN.test(id)) {
+  throw invalidDtoIn({
+    invalidValueKeyMap: {
+      id: "id musí být platné UUID."
+    }
+  });
+}
+
+const court = await db.court.findUnique({
+  where: {id},
+  include: {
+    venue: {
+      select: {
+        managerId: true,
+      },
+    },
+  },
+});
+if (!court) {
+  throw new AppError(
+    "courtDoesNotExist",
+    "Kurt nenalezen.",
+    404,
+    { id },
+  );
+}
+
+if (court.venue.managerId !== managerId ) {
+  throw notAuthorized();
+}
+
+await db.$transaction(async (tx) => {
+  const deletedRules = await tx.priceRule.deleteMany({
+    where: {
+      courtId: id,
+    },
+  });
+  await tx.court.delete({
+    where: {
+      id,
+    },
+  });
+
+  	await tx.auditLog.create({
+						data: {
+							userId: managerId,
+							action: 'court/delete',
+							entityType: 'Court',
+							entityId: id,
+							details: { 
+                name: court.name,
+                sport: court.sport,
+                venueId: court.venueId,
+                deletedRules: deletedRules.count,
+              },
+						},
+					});
+
+
+
+});
+  	
+  res.json({
+  id,
+  deleted: true,
+  });
+});
+
 
   return router;
 }
