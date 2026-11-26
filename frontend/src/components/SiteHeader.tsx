@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, Buildings, List, MagnifyingGlass, Plus, X } from "@phosphor-icons/react";
+import { ArrowRight, Buildings, CalendarCheck, List, MagnifyingGlass, Plus, X } from "@phosphor-icons/react";
 import { Logo } from "@/components/Logo";
 import { UserMenu } from "@/components/UserMenu";
 import { loginPath, useAuth } from "@/lib/auth";
@@ -121,6 +121,11 @@ export function SiteHeader() {
         <div className="mt-3 grid gap-1 border-t border-line pt-3">
           <Link href="/#sporty" onClick={() => setOpen(false)} className="flex min-h-11 items-center rounded-xl px-4 text-sm text-muted hover:bg-surface">Najdi svůj sport</Link>
           <Link href="/#o-sportslotu" onClick={() => setOpen(false)} className="flex min-h-11 items-center rounded-xl px-4 text-sm text-muted hover:bg-surface">O SportSlotu</Link>
+          {user && (
+            <Link href="/reservations" onClick={() => setOpen(false)} className="flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold hover:bg-surface">
+              <CalendarCheck size={18} aria-hidden="true" /> Moje rezervace
+            </Link>
+          )}
           {user?.roles.includes("MANAGER") && (
             <>
               <Link href="/venues/mine" onClick={() => setOpen(false)} className="flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold hover:bg-surface">

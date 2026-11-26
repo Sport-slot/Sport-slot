@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Buildings, CaretDown, MagnifyingGlass, Plus, SignOut } from "@phosphor-icons/react";
+import { Buildings, CalendarCheck, CaretDown, MagnifyingGlass, Plus, SignOut } from "@phosphor-icons/react";
 import type { CurrentUser } from "@/lib/api";
 import { initialsOf, logout, roleLabels } from "@/lib/auth";
 
@@ -108,6 +108,9 @@ export function UserMenu({ user, onOpen }: { user: CurrentUser; onOpen?: () => v
         <nav aria-label="Účet" className="border-t border-line pt-2">
           <Link href="/venues" onClick={() => setOpen(false)} className={itemClass}>
             <MagnifyingGlass size={18} aria-hidden="true" /> Najít sportoviště
+          </Link>
+          <Link href="/reservations" onClick={() => setOpen(false)} className={itemClass}>
+            <CalendarCheck size={18} aria-hidden="true" /> Moje rezervace
           </Link>
           {isManager && (
             <>

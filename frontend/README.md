@@ -70,3 +70,11 @@ Předpokládaný dtoIn (dokud není hotová dokumentace API v Command listu):
 ```
 
 `dayOfWeek` je 1 = pondělí až 7 = neděle, zavřené dny v seznamu nejsou.
+
+## Moje rezervace
+
+Stránka je na `/reservations` (jen role `PLAYER`, odkaz „Moje rezervace“ je v menu účtu a v mobilní navigaci). Záložky „Nadcházející“ a „Proběhlé“ volají `listMyReservations()` z `@/lib/reservations`, tedy `GET /api/reservation/listMy?period=upcoming|past&pageIndex&pageSize` (po 20, „Načíst další“ přidává další stránku). U nadcházející rezervace jde zrušit tlačítkem „Zrušit rezervaci“ s potvrzením: `cancelReservation()` volá `POST /api/reservation/cancel` s `{ "id": "…" }`. Zrušit lze nejpozději 24 h před začátkem (`canCancel()`, stejná hranice jako na backendu, chybu `reservation/cancel/cancellationTooLate` zobrazí dialog). Po zrušení zůstane karta v seznamu s označením „Zrušeno“. Datum a čas se formátují v `Europe/Prague`.
+
+S nastaveným `NEXT_PUBLIC_MOCK_ROLE` místo API použije mock: pět rezervací v paměti prohlížeče vztažených k aktuálnímu času (za 3 dny, za 10 hodin = už nejde zrušit, včerejší odehraná, zrušená před týdnem a zrušená budoucí), stejné filtrování a řazení jako backend a stejná chyba `cancellationTooLate` (400).
+
+Zrušená rezervace, která ještě neskončila, zůstává v záložce „Nadcházející“ s označením „Zrušeno“, i po obnovení stránky.
