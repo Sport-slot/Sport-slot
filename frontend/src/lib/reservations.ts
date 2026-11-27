@@ -39,6 +39,8 @@ export type CancelledReservation = Omit<Reservation, "courtName" | "venueName"> 
   uuAppErrorMap?: UuAppErrorMap;
 };
 
+export type CreatedReservation = Pick<Reservation, "id" | "courtId" | "startAt" | "endAt" | "totalPrice" | "status">;
+
 export async function listMyReservations({
   period,
   pageIndex = 0,
@@ -78,6 +80,26 @@ export async function cancelReservation(id: string): Promise<CancelledReservatio
     throw await toApiError(response);
   }
   return (await response.json()) as CancelledReservation;
+}
+
+export async function createReservation({
+  courtId,
+  startAt,
+  endAt,
+}: {
+  courtId: string;
+  startAt: string;
+  endAt: string;
+}): Promise<CreatedReservation> {
+  const response = await fetch(`${apiBaseUrl}/reservation/create`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ courtId, startAt, endAt }),
+  });
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+  return (await response.json()) as CreatedReservation;
 }
 
 const dateFormat = new Intl.DateTimeFormat("cs-CZ", {
