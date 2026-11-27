@@ -97,6 +97,19 @@ export async function getCourtAvailability(courtId: string, date: string): Promi
   return (await response.json()) as CourtAvailability;
 }
 
+export type SlotRange = { from: number; to: number };
+
+// Klik na volnou hodinu přilehlou k výběru ho prodlouží; jinak začne nový výběr.
+export function selectSlot(slots: CourtSlot[], range: SlotRange | null, index: number): SlotRange {
+  if (range && index === range.from - 1 && slots[index].endAt === slots[range.from].startAt) {
+    return { from: index, to: range.to };
+  }
+  if (range && index === range.to + 1 && slots[range.to].endAt === slots[index].startAt) {
+    return { from: range.from, to: index };
+  }
+  return { from: index, to: index };
+}
+
 const pragueDateFormat = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Prague", year: "numeric", month: "2-digit", day: "2-digit" });
 
 export function pragueToday(now = new Date()): string {
